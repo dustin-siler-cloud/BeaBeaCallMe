@@ -7,6 +7,7 @@ from flask import Blueprint, request
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse
 
+from app.gdrive import upload_recording
 from app.utils.db import init_db, log_recording
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, twiml_response
@@ -100,6 +101,12 @@ def voicemail_callback():
         file_size = os.path.getsize(filepath)
         logger.info("Saved recording to %s (%d bytes)", filepath, file_size)
 
+        drive_file_id = None
+        try:
+            drive_file_id = upload_recording(filepath, filename)
+        except Exception:
+            logger.exception("GDrive upload failed for %s — keeping local copy", filename)
+
         log_recording(
             created_at=now.isoformat(),
             caller_id=caller_id,
@@ -107,6 +114,7 @@ def voicemail_callback():
             filename=os.path.join(date_path, filename),
             file_size=file_size,
             twilio_sid=recording_sid,
+            gdrive_file_id=drive_file_id,
         )
 
         # Delete from Twilio to avoid storage costs
