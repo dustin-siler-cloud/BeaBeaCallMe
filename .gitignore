@@ -1,4 +1,5 @@
 .env
+gdrive-credentials.json
 .venv/
 __pycache__/
 *.pyc
