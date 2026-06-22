@@ -82,7 +82,7 @@ jobs:
         run: docker build -t beabeacallme:ci .
 
       - name: Grype container scan
-        uses: anchore/scan-action@v6
+        uses: anchore/scan-action@v7
         with:
           image: beabeacallme:ci
           fail-build: true
