@@ -22,3 +22,6 @@ class Config:
     RECORDINGS_DIR = os.path.join(DATA_DIR, "recordings")
 
     SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
+
+    GDRIVE_CREDENTIALS_PATH = require_env("GDRIVE_CREDENTIALS_PATH")
+    GDRIVE_FOLDER_ID = require_env("GDRIVE_FOLDER_ID")
