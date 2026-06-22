@@ -170,10 +170,10 @@ Runs on every push to `main` and every pull request.
 | **Dependency Audit** | `pip-audit` | CVEs in `requirements.txt` against the OSV database | PRs + main |
 | **Python SAST** | `bandit` + `ruff` | Hardcoded secrets, unsafe deserialization, injection risks, code quality | PRs + main |
 | **Dockerfile Lint** | `hadolint` | Dockerfile best-practice violations | PRs + main |
-| **Secret Scan** | `trufflehog` | Leaked credentials in full git history (verified-only) | main only |
+| **Secret Scan** | `trufflehog` | Leaked credentials in full git history (verified-only) | PRs + main |
 | **Container Scan** | `grype` (Anchore) | OS-level and library CVEs in the built Docker image — fails on fixable high/critical | main only |
 
-Secret scan and container scan are gated to `main`-push only to keep PR feedback fast.
+Container scan is gated to `main`-push only (slow Docker build); all other checks run on every PR.
 
 ### GitHub Security Features
 
@@ -263,5 +263,5 @@ BeaBeaCallMe/
 |---|---|---|
 | **v1.0.0** | 2026-06-22 | Initial setup: Docker + docker-compose, Google Drive upload via service account, SQLite gdrive_file_id column, CLAUDE.md, Full-Stack-Documentation.md |
 <<<<<<< HEAD
-| **v1.1.0** | 2026-06-22 | CI security pipeline: pip-audit, Bandit + Ruff, Hadolint, TruffleHog, Grype container scan; Dependabot for pip and Actions |
+| **v1.1.0** | 2026-06-22 | CI security pipeline: pip-audit, Bandit + Ruff, Hadolint, TruffleHog (PRs + main), Grype container scan (main only); Dependabot for pip and Actions |
 | **v1.1.1** | 2026-06-22 | Bump python-dotenv 1.2.1→1.2.2 (CVE-2026-28684), requests 2.32.5→2.33.0 (CVE-2026-25645) |
