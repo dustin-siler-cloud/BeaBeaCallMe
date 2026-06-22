@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.2.0
+> **Version:** v1.2.1
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -96,7 +96,7 @@ The tunnel is configured externally (same pattern as SecScan). The app only need
 
 | Component | Version | Purpose | Docs |
 |---|---|---|---|
-| **Python** | 3.12 | Runtime | https://docs.python.org/3.12/ |
+| **Python** | 3.13 | Runtime | https://docs.python.org/3.13/ |
 | **Flask** | 3.1.3 | Web framework | https://flask.palletsprojects.com/ |
 | **Gunicorn** | latest | WSGI server (2 workers, 60s timeout) | https://docs.gunicorn.org/ |
 | **python-dotenv** | 1.2.2 | `.env` loading | https://github.com/theskumar/python-dotenv |
@@ -167,7 +167,7 @@ Runs on every push to `main` and every pull request.
 | **Python SAST** | `bandit` + `ruff` | Hardcoded secrets, unsafe deserialization, injection risks, code quality | PRs + main |
 | **Dockerfile Lint** | `hadolint` | Dockerfile best-practice violations | PRs + main |
 | **Secret Scan** | `trufflehog` | Leaked credentials in full git history (verified-only) | PRs + main |
-| **Container Scan** | `grype` (Anchore) | OS-level and library CVEs in the built Docker image — fails on fixable high/critical | main only |
+| **Container Scan** | `grype` (Anchore) | OS-level and library CVEs in the built Docker image — fails on fixable high/critical (`only-fixed: true`) | main only |
 
 Container scan is gated to `main`-push only (slow Docker build); all other checks run on every PR.
 
@@ -271,3 +271,4 @@ BeaBeaCallMe/
 | **v1.1.0** | 2026-06-22 | CI security pipeline: pip-audit, Bandit + Ruff, Hadolint, TruffleHog (PRs + main), Grype container scan (main only); Dependabot for pip and Actions |
 | **v1.1.1** | 2026-06-22 | Bump python-dotenv 1.2.1→1.2.2 (CVE-2026-28684), requests 2.32.5→2.33.0 (CVE-2026-25645) |
 | **v1.2.0** | 2026-06-22 | Dependabot batch: twilio 9.10.5→9.10.9, requests 2.33.0→2.34.2, google-api-python-client 2.169.0→2.197.0, google-auth 2.40.3→2.55.0, actions/checkout v4→v7, actions/setup-python v5→v6, trufflehog v3.88.26→v3.95.6, hadolint-action v3.1.0→v3.3.0, anchore/scan-action v6→v7; fix conflict markers in docs |
+| **v1.2.1** | 2026-06-22 | Upgrade Python 3.12→3.13 (resolves CVE-2026-6100 Critical, CVE-2026-7210/4224/3644 High); add `only-fixed: true` to Grype to suppress unfixable Debian OS-level vulns |
