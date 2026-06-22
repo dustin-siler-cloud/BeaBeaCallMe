@@ -9,3 +9,12 @@ services:
       - ./gdrive-credentials.json:/app/gdrive-credentials.json:ro
     env_file:
       - .env
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - app
