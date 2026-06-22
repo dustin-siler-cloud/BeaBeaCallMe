@@ -1,10 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-<<<<<<< HEAD
-> **Version:** v1.1.1
-=======
-> **Version:** v1.0.1
->>>>>>> 8d86ef2 (fix: bump python-dotenv and requests to patch CVEs)
+> **Version:** v1.2.0
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -109,8 +105,8 @@ The tunnel is configured externally (same pattern as SecScan). The app only need
 
 | Component | Version | Purpose | Docs |
 |---|---|---|---|
-| **twilio** | 9.10.5 | Twilio REST client + TwiML builder | https://www.twilio.com/docs/libraries/python |
-| **requests** | 2.33.0 | Download recordings from Twilio | https://docs.python-requests.org/ |
+| **twilio** | 9.10.9 | Twilio REST client + TwiML builder | https://www.twilio.com/docs/libraries/python |
+| **requests** | 2.34.2 | Download recordings from Twilio | https://docs.python-requests.org/ |
 
 **IVR Flow (`app/routes/`):**
 
@@ -128,8 +124,8 @@ The tunnel is configured externally (same pattern as SecScan). The app only need
 
 | Component | Version | Purpose | Docs |
 |---|---|---|---|
-| **google-api-python-client** | 2.169.0 | Drive API v3 client | https://googleapis.github.io/google-api-python-client/ |
-| **google-auth** | 2.40.3 | Service account credentials | https://google-auth.readthedocs.io/ |
+| **google-api-python-client** | 2.197.0 | Drive API v3 client | https://googleapis.github.io/google-api-python-client/ |
+| **google-auth** | 2.55.0 | Service account credentials | https://google-auth.readthedocs.io/ |
 
 **Helper (`app/gdrive.py`):**
 - Authenticates with a service account JSON file (scope: `drive.file`)
@@ -175,6 +171,16 @@ Runs on every push to `main` and every pull request.
 
 Container scan is gated to `main`-push only (slow Docker build); all other checks run on every PR.
 
+### Action Pins
+
+| Action | Version |
+|---|---|
+| `actions/checkout` | v7 |
+| `actions/setup-python` | v6 |
+| `trufflesecurity/trufflehog` | v3.95.6 |
+| `hadolint/hadolint-action` | v3.3.0 |
+| `anchore/scan-action` | v7 |
+
 ### GitHub Security Features
 
 | Feature | Purpose |
@@ -187,9 +193,9 @@ Container scan is gated to `main`-push only (slow Docker build); all other check
 
 1. Create a feature branch (`feat/`, `fix/`, `ci/`, `chore/`)
 2. Make changes and commit; update `Full-Stack-Documentation.md` version history
-3. Push and open a PR — dependency audit, SAST, and Dockerfile lint run automatically
+3. Push and open a PR — all checks run automatically
 4. Merge PR on GitHub (never push directly to main)
-5. Secret scan and container scan run on the merged main push
+5. Container scan runs on the merged main push
 6. `docker compose up -d --build` on the host to deploy
 
 ---
@@ -262,6 +268,6 @@ BeaBeaCallMe/
 | Tag | Date | Description |
 |---|---|---|
 | **v1.0.0** | 2026-06-22 | Initial setup: Docker + docker-compose, Google Drive upload via service account, SQLite gdrive_file_id column, CLAUDE.md, Full-Stack-Documentation.md |
-<<<<<<< HEAD
 | **v1.1.0** | 2026-06-22 | CI security pipeline: pip-audit, Bandit + Ruff, Hadolint, TruffleHog (PRs + main), Grype container scan (main only); Dependabot for pip and Actions |
 | **v1.1.1** | 2026-06-22 | Bump python-dotenv 1.2.1→1.2.2 (CVE-2026-28684), requests 2.32.5→2.33.0 (CVE-2026-25645) |
+| **v1.2.0** | 2026-06-22 | Dependabot batch: twilio 9.10.5→9.10.9, requests 2.33.0→2.34.2, google-api-python-client 2.169.0→2.197.0, google-auth 2.40.3→2.55.0, actions/checkout v4→v7, actions/setup-python v5→v6, trufflehog v3.88.26→v3.95.6, hadolint-action v3.1.0→v3.3.0, anchore/scan-action v6→v7; fix conflict markers in docs |
