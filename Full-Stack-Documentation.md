@@ -1,6 +1,10 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.0.0
+<<<<<<< HEAD
+> **Version:** v1.1.1
+=======
+> **Version:** v1.0.1
+>>>>>>> 8d86ef2 (fix: bump python-dotenv and requests to patch CVEs)
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -12,6 +16,7 @@
 - [Architecture Overview](#architecture-overview)
 - [Infrastructure](#infrastructure)
 - [Backend Stack](#backend-stack)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Configuration Reference](#configuration-reference)
 - [Project Structure](#project-structure)
 - [Version History](#version-history)
@@ -68,7 +73,7 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
 | **App** | `python:3.12-slim` | Flask IVR app + GDrive uploader |
 
 **Compose:**
-- `docker-compose.yml` — single service, port bound to `127.0.0.1:8080`, `./data` volume for SQLite, `gdrive-credentials.json` mounted read-only.
+- `docker-compose.yml` — single service, port bound to `127.0.0.1:8080`, `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only.
 
 **Start/rebuild:**
 ```bash
@@ -98,14 +103,14 @@ The tunnel is configured externally (same pattern as SecScan). The app only need
 | **Python** | 3.12 | Runtime | https://docs.python.org/3.12/ |
 | **Flask** | 3.1.3 | Web framework | https://flask.palletsprojects.com/ |
 | **Gunicorn** | latest | WSGI server (2 workers, 60s timeout) | https://docs.gunicorn.org/ |
-| **python-dotenv** | 1.2.1 | `.env` loading | https://github.com/theskumar/python-dotenv |
+| **python-dotenv** | 1.2.2 | `.env` loading | https://github.com/theskumar/python-dotenv |
 
 ### Twilio
 
 | Component | Version | Purpose | Docs |
 |---|---|---|---|
 | **twilio** | 9.10.5 | Twilio REST client + TwiML builder | https://www.twilio.com/docs/libraries/python |
-| **requests** | 2.32.5 | Download recordings from Twilio | https://docs.python-requests.org/ |
+| **requests** | 2.33.0 | Download recordings from Twilio | https://docs.python-requests.org/ |
 
 **IVR Flow (`app/routes/`):**
 
@@ -154,6 +159,41 @@ Recordings are saved locally under `./data/recordings/YYYY/MM/DD/` and mirrored 
 
 ---
 
+## CI/CD Pipeline
+
+### GitHub Actions (`.github/workflows/security.yml`)
+
+Runs on every push to `main` and every pull request.
+
+| Job | Tool | What it Checks | When |
+|---|---|---|---|
+| **Dependency Audit** | `pip-audit` | CVEs in `requirements.txt` against the OSV database | PRs + main |
+| **Python SAST** | `bandit` + `ruff` | Hardcoded secrets, unsafe deserialization, injection risks, code quality | PRs + main |
+| **Dockerfile Lint** | `hadolint` | Dockerfile best-practice violations | PRs + main |
+| **Secret Scan** | `trufflehog` | Leaked credentials in full git history (verified-only) | main only |
+| **Container Scan** | `grype` (Anchore) | OS-level and library CVEs in the built Docker image — fails on fixable high/critical | main only |
+
+Secret scan and container scan are gated to `main`-push only to keep PR feedback fast.
+
+### GitHub Security Features
+
+| Feature | Purpose |
+|---|---|
+| **Dependabot Alerts** | Notifies when dependencies have known CVEs |
+| **Dependabot Security Updates** | Auto-opens PRs to bump vulnerable packages |
+| **Dependabot Version Updates** | Weekly PRs for pip and GitHub Actions pins (grouped patch/minor) |
+
+### Deployment Workflow
+
+1. Create a feature branch (`feat/`, `fix/`, `ci/`, `chore/`)
+2. Make changes and commit; update `Full-Stack-Documentation.md` version history
+3. Push and open a PR — dependency audit, SAST, and Dockerfile lint run automatically
+4. Merge PR on GitHub (never push directly to main)
+5. Secret scan and container scan run on the merged main push
+6. `docker compose up -d --build` on the host to deploy
+
+---
+
 ## Configuration Reference
 
 All configuration is via environment variables in `.env` (git-ignored).
@@ -182,33 +222,37 @@ All configuration is via environment variables in `.env` (git-ignored).
 
 ```
 BeaBeaCallMe/
+├── .github/
+│   ├── dependabot.yml                # Dependabot (pip + Actions — weekly, grouped)
+│   └── workflows/
+│       └── security.yml              # CI security pipeline
 ├── app/
-│   ├── __init__.py               # create_app() factory, blueprint registration, /health endpoint
-│   ├── gdrive.py                 # Google Drive upload helper (service account)
+│   ├── __init__.py                   # create_app() factory, blueprint registration, /health
+│   ├── gdrive.py                     # Google Drive upload helper (service account)
 │   ├── routes/
 │   │   ├── __init__.py
-│   │   ├── ivr.py                # /call and /call/route — main menu
-│   │   └── voicemail.py          # /voicemail, /voicemail/done, /voicemail/callback
+│   │   ├── ivr.py                    # /call and /call/route — main menu
+│   │   └── voicemail.py              # /voicemail, /voicemail/done, /voicemail/callback
 │   ├── services/
 │   │   └── __init__.py
 │   └── utils/
 │       ├── __init__.py
-│       ├── db.py                 # SQLite init and log_recording()
-│       ├── twilio_validator.py   # @validate_twilio_request decorator
-│       └── twiml.py              # TwiML helper builders
+│       ├── db.py                     # SQLite init and log_recording()
+│       ├── twilio_validator.py       # @validate_twilio_request decorator
+│       └── twiml.py                  # TwiML helper builders
 ├── data/
-│   └── .gitkeep                  # Placeholder — SQLite DB and recordings live here (git-ignored)
+│   └── .gitkeep                      # Placeholder — SQLite DB and recordings live here
 ├── scripts/
-│   └── recover.sh                # Upstream recovery script
-├── .env                          # Secrets — git-ignored
-├── .env.template                 # Template with all config keys
+│   └── recover.sh                    # Upstream recovery script
+├── .env                              # Secrets — git-ignored
+├── .env.template                     # Template with all config keys
 ├── .gitignore
-├── CLAUDE.md                     # Project instructions for Claude Code
-├── docker-compose.yml            # Single-service compose (127.0.0.1:8080, ./data volume)
-├── Dockerfile                    # python:3.12-slim + gunicorn
-├── Full-Stack-Documentation.md   # This file
-├── requirements.txt              # Python dependencies
-└── run.py                        # App entry point (create_app())
+├── CLAUDE.md                         # Project instructions for Claude Code
+├── docker-compose.yml                # Single-service compose (127.0.0.1:8080, ./data volume)
+├── Dockerfile                        # python:3.12-slim + gunicorn
+├── Full-Stack-Documentation.md       # This file
+├── requirements.txt                  # Python dependencies
+└── run.py                            # App entry point (create_app())
 ```
 
 ---
@@ -218,3 +262,6 @@ BeaBeaCallMe/
 | Tag | Date | Description |
 |---|---|---|
 | **v1.0.0** | 2026-06-22 | Initial setup: Docker + docker-compose, Google Drive upload via service account, SQLite gdrive_file_id column, CLAUDE.md, Full-Stack-Documentation.md |
+<<<<<<< HEAD
+| **v1.1.0** | 2026-06-22 | CI security pipeline: pip-audit, Bandit + Ruff, Hadolint, TruffleHog, Grype container scan; Dependabot for pip and Actions |
+| **v1.1.1** | 2026-06-22 | Bump python-dotenv 1.2.1→1.2.2 (CVE-2026-28684), requests 2.32.5→2.33.0 (CVE-2026-25645) |
