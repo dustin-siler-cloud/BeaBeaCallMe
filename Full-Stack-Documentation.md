@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.2.1
+> **Version:** v1.3.0
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -66,10 +66,11 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
 
 | Component | Image | Purpose |
 |---|---|---|
-| **App** | `python:3.12-slim` | Flask IVR app + GDrive uploader |
+| **App** | `python:3.13-slim` | Flask IVR app + GDrive uploader |
+| **cloudflared** | `cloudflare/cloudflared:latest` | Cloudflare tunnel connector |
 
 **Compose:**
-- `docker-compose.yml` — single service, port bound to `127.0.0.1:8080`, `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only.
+- `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only.
 
 **Start/rebuild:**
 ```bash
@@ -86,7 +87,7 @@ docker compose up -d --build
 
 ### Cloudflare Tunnel
 
-The tunnel is configured externally (same pattern as SecScan). The app only needs `BASE_URL` set to the tunnel's public hostname so Twilio can construct callback URLs.
+A named tunnel (`beabeacallme`) runs as a Docker service alongside the app. The `cloudflared` container connects outbound to Cloudflare's edge and routes `https://beabeacallme.siler.cloud` → `http://app:8080` (Docker service name). No open inbound ports required. Token stored in `.env` as `CLOUDFLARE_TUNNEL_TOKEN`.
 
 ---
 
@@ -211,7 +212,8 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `TWILIO_ACCOUNT_SID` | Twilio account SID | `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token (also used for request validation) | `your_auth_token_here` |
 | `TWILIO_PHONE_NUMBER` | Twilio phone number | `+15550000000` |
-| `BASE_URL` | Public tunnel URL (no trailing slash) | `https://bea-voicemail.your-tunnel.com` |
+| `BASE_URL` | Public tunnel URL (no trailing slash) | `https://beabeacallme.siler.cloud` |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/gdrive-credentials.json` |
 | `GDRIVE_FOLDER_ID` | Google Drive folder ID to upload recordings into | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs` |
 
@@ -272,3 +274,4 @@ BeaBeaCallMe/
 | **v1.1.1** | 2026-06-22 | Bump python-dotenv 1.2.1→1.2.2 (CVE-2026-28684), requests 2.32.5→2.33.0 (CVE-2026-25645) |
 | **v1.2.0** | 2026-06-22 | Dependabot batch: twilio 9.10.5→9.10.9, requests 2.33.0→2.34.2, google-api-python-client 2.169.0→2.197.0, google-auth 2.40.3→2.55.0, actions/checkout v4→v7, actions/setup-python v5→v6, trufflehog v3.88.26→v3.95.6, hadolint-action v3.1.0→v3.3.0, anchore/scan-action v6→v7; fix conflict markers in docs |
 | **v1.2.1** | 2026-06-22 | Upgrade Python 3.12→3.13 (resolves CVE-2026-6100 Critical, CVE-2026-7210/4224/3644 High); add `only-fixed: true` to Grype to suppress unfixable Debian OS-level vulns |
+| **v1.3.0** | 2026-06-22 | Add Cloudflare tunnel: `cloudflared` service in docker-compose, named tunnel `beabeacallme` routing `https://beabeacallme.siler.cloud` → `http://app:8080`; `CLOUDFLARE_TUNNEL_TOKEN` env var |
