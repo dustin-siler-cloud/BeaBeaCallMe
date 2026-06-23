@@ -5,6 +5,7 @@ from twilio.twiml.voice_response import VoiceResponse
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, main_menu_twiml, twiml_response
 from config import Config
+from config import Config
 
 logger = logging.getLogger(__name__)
 ivr_bp = Blueprint("ivr", __name__)
@@ -15,7 +16,15 @@ ivr_bp = Blueprint("ivr", __name__)
 def call():
     """Entry point for all incoming calls — presents the main menu."""
     try:
-        logger.info("Incoming call from %s", request.form.get("From", "unknown"))
+        caller = request.form.get("From", "unknown")
+        logger.info("Incoming call from %s", caller)
+
+        if Config.ALLOWED_CALLERS and caller not in Config.ALLOWED_CALLERS:
+            logger.warning("Rejected call from unlisted number: %s", caller)
+            vr = VoiceResponse()
+            vr.reject()
+            return twiml_response(vr)
+
         return main_menu_twiml()
     except Exception:
         logger.exception("Error in /call")
