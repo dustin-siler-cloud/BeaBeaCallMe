@@ -2,6 +2,7 @@ import logging
 import time
 from flask import Flask, jsonify
 from config import Config
+from app.utils.security_headers import add_security_headers
 
 START_TIME = time.time()
 
@@ -20,6 +21,7 @@ def create_app():
 
     app.register_blueprint(ivr_bp)
     app.register_blueprint(voicemail_bp)
+    app.after_request(add_security_headers)
 
     @app.get("/health")
     def health():
