@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.3.1
+> **Version:** v1.4.0
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -70,7 +70,7 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
 | **cloudflared** | `cloudflare/cloudflared:latest` | Cloudflare tunnel connector |
 
 **Compose:**
-- `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only.
+- `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only from `C:\dev\BeaBeaCallMe\` (local path avoids Google Drive virtual filesystem bind-mount issue).
 
 **Start/rebuild:**
 ```bash
@@ -129,8 +129,9 @@ A named tunnel (`beabeacallme`) runs as a Docker service alongside the app. The 
 | **google-auth** | 2.55.0 | Service account credentials | https://google-auth.readthedocs.io/ |
 
 **Helper (`app/gdrive.py`):**
-- Authenticates with a service account JSON file (scope: `drive.file`)
-- `upload_recording(local_path, filename)` → uploads WAV to the configured Drive folder, returns Drive file ID
+- Authenticates with a service account JSON file (scope: `drive`)
+- `upload_recording(local_path, filename)` → uploads WAV to the configured Shared Drive, returns Drive file ID
+- Uses `supportsAllDrives=True` and `driveId` in metadata to target the Shared Drive root
 - GDrive upload failure is non-fatal: logged as a warning, local copy kept, Twilio callback still returns 204
 
 ### Database (SQLite)
@@ -216,7 +217,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all | `+15551234567,+15559876543` |
 | `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/gdrive-credentials.json` |
-| `GDRIVE_FOLDER_ID` | Google Drive folder ID to upload recordings into | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs` |
+| `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ADDIwQCL-VazUk9PVA` |
 
 ### Optional
 
@@ -277,3 +278,4 @@ BeaBeaCallMe/
 | **v1.2.1** | 2026-06-22 | Upgrade Python 3.12→3.13 (resolves CVE-2026-6100 Critical, CVE-2026-7210/4224/3644 High); add `only-fixed: true` to Grype to suppress unfixable Debian OS-level vulns |
 | **v1.3.0** | 2026-06-22 | Add Cloudflare tunnel: `cloudflared` service in docker-compose, named tunnel `beabeacallme` routing `https://beabeacallme.siler.cloud` → `http://app:8080`; `CLOUDFLARE_TUNNEL_TOKEN` env var |
 | **v1.3.1** | 2026-06-23 | Add caller allowlist: `ALLOWED_CALLERS` env var; unknown callers are rejected via `<Reject>` TwiML before hearing the IVR |
+| **v1.4.0** | 2026-06-23 | Fix GDrive upload: switch to Shared Drive (`BeaBea-Tincan-Audio`), `drive` scope, `supportsAllDrives=True`; move credentials file to `C:\dev\BeaBeaCallMe\` to fix Docker bind-mount issue on Google Drive virtual filesystem; add `.dockerignore` |
