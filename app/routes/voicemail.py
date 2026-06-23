@@ -25,15 +25,12 @@ def voicemail():
     """Prompt the caller to leave a message and start recording."""
     try:
         vr = VoiceResponse()
-        vr.say(
-            "Please leave your voicemail after the beep. "
-            "Press pound when you are finished."
-        )
+        vr.say("Please leave your message after the beep.")
         vr.record(
             action=f"{Config.BASE_URL}/voicemail/done",
             recording_status_callback=f"{Config.BASE_URL}/voicemail/callback",
             recording_status_callback_method="POST",
-            finish_on_key="#",
+            finish_on_key="",
             max_length=300,
             play_beep=True,
         )
