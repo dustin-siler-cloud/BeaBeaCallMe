@@ -1,0 +1,6 @@
+gdrive-credentials.json
+.env
+data/
+__pycache__/
+*.pyc
+.git/
