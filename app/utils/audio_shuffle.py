@@ -1,6 +1,7 @@
+import os
 import random
 
-_TWILIO_ASSET_BASE = "https://beabeacallme-1558.twil.io"
+_TWILIO_ASSET_BASE = os.environ["TWILIO_ASSET_BASE"].rstrip("/")
 
 _GREETING_CLIPS = [
     "IVR-1-Intro-Bluey.mp3",
