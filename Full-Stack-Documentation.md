@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.6.2
+> **Version:** v1.7.0
 > **Last Updated:** 2026-06-23
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -130,6 +130,7 @@ Applied to every response via `app.after_request`:
 | `X-Frame-Options` | `DENY` |
 | `Referrer-Policy` | `no-referrer` |
 | `Content-Security-Policy` | `default-src 'none'` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
 
 **Request validation:** All routes are decorated with `@validate_twilio_request` (`app/utils/twilio_validator.py`) — verifies the `X-Twilio-Signature` header against `TWILIO_AUTH_TOKEN` to reject spoofed requests.
 
@@ -240,9 +241,11 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `TWILIO_ACCOUNT_SID` | Twilio account SID | `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token (also used for request validation) | `your_auth_token_here` |
 | `TWILIO_PHONE_NUMBER` | Twilio phone number | `+15550000000` |
+| `TWILIO_ASSET_BASE` | Twilio Assets service base URL (no trailing slash) | `https://your-service-name.twil.io` |
 | `BASE_URL` | Public tunnel URL (no trailing slash) | `https://your-tunnel.your-domain.com` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
-| `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all | `+15551234567,+15559876543` |
+| `FLASK_SECRET_KEY` | Flask session secret — generate with `python -c "import secrets; print(secrets.token_hex(32))"` | (long random string) |
+| `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all callers | `+15551234567,+15559876543` |
 | `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15550001111:Bea,+15550002222:Dustin` |
 | `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/secrets/your-credentials-file.json` |
 | `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ABCDEFGHIJKLMNOPabcd` |
@@ -252,7 +255,6 @@ All configuration is via environment variables in `.env` (git-ignored).
 | Variable | Default | Purpose |
 |---|---|---|
 | `DATA_DIR` | `./data` (relative to app root) | SQLite DB and recordings directory |
-| `FLASK_SECRET_KEY` | `dev-secret-change-me` | Flask session secret — change in production |
 
 ---
 
@@ -282,8 +284,7 @@ BeaBeaCallMe/
 │       └── twiml.py                  # TwiML helper builders
 ├── data/
 │   └── .gitkeep                      # Placeholder — SQLite DB and recordings live here
-├── scripts/
-│   └── recover.sh                    # Upstream recovery script
+├── scripts/                          # (empty — recover.sh removed in v1.7.0)
 ├── .env                              # Secrets — git-ignored
 ├── .env.template                     # Template with all config keys
 ├── .gitignore
@@ -317,3 +318,4 @@ BeaBeaCallMe/
 | **v1.6.0** | 2026-06-23 | Add security response headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP); document fish.audio IVR greeting clips |
 | **v1.6.1** | 2026-06-23 | Document UptimeRobot uptime monitoring (free tier, 5-min ping) |
 | **v1.6.2** | 2026-06-23 | Add `git pull` step to deployment workflow in docs |
+| **v1.7.0** | 2026-06-23 | Security hardening: move Twilio asset base URL to `TWILIO_ASSET_BASE` env var; make `FLASK_SECRET_KEY` required; sanitize caller name before filesystem use; remove uptime from `/health`; add HSTS header; add `CLAUDE.md` to `.gitignore`; delete obsolete `recover.sh`; rewrite `.env.template` |
