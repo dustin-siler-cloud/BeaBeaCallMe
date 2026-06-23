@@ -7,7 +7,7 @@ from googleapiclient.http import MediaFileUpload
 
 logger = logging.getLogger(__name__)
 
-_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 
 def _get_service():
@@ -19,18 +19,23 @@ def _get_service():
 
 
 def upload_recording(local_path: str, filename: str) -> str:
-    """Upload a WAV file to the configured Drive folder. Returns the Drive file ID."""
-    folder_id = os.environ["GDRIVE_FOLDER_ID"]
+    """Upload a WAV file to the configured Shared Drive. Returns the Drive file ID."""
+    drive_id = os.environ["GDRIVE_FOLDER_ID"]
     service = _get_service()
 
-    metadata = {"name": filename, "parents": [folder_id]}
+    metadata = {"name": filename, "parents": [drive_id], "driveId": drive_id}
     media = MediaFileUpload(local_path, mimetype="audio/wav", resumable=False)
 
     file = (
         service.files()
-        .create(body=metadata, media_body=media, fields="id")
+        .create(
+            body=metadata,
+            media_body=media,
+            fields="id",
+            supportsAllDrives=True,
+        )
         .execute()
     )
-    drive_id = file.get("id")
-    logger.info("Uploaded %s to Drive as %s", filename, drive_id)
-    return drive_id
+    file_id = file.get("id")
+    logger.info("Uploaded %s to Shared Drive as %s", filename, file_id)
+    return file_id
