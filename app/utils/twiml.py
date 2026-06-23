@@ -1,12 +1,12 @@
+from flask import Response
 from twilio.twiml.voice_response import VoiceResponse
 
+from app.utils.audio_shuffle import next_greeting_url
 from config import Config
 
 
 def twiml_response(vr):
     """Return a Flask response with correct Content-Type for TwiML."""
-    from flask import Response
-
     return Response(str(vr), mimetype="text/xml")
 
 
@@ -24,7 +24,7 @@ def main_menu_twiml():
     gather = vr.gather(
         num_digits=1, action=f"{Config.BASE_URL}/call/route", method="POST", timeout=10
     )
-    gather.say("Welcome. Press 1 to leave a voicemail.")
+    gather.play(next_greeting_url())
     # If no input, repeat the menu
     vr.redirect(f"{Config.BASE_URL}/call")
     return twiml_response(vr)
