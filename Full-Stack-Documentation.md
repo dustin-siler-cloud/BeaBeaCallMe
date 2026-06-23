@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.5.4
+> **Version:** v1.6.0
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -119,7 +119,24 @@ A named tunnel (`beabeacallme`) runs as a Docker service alongside the app. The 
 | `POST /voicemail/done` | `voicemail` | Says "thank you, goodbye", hangs up |
 | `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive → SQLite log → delete from Twilio |
 
+**Security headers (`app/utils/security_headers.py`):**
+
+Applied to every response via `app.after_request`:
+
+| Header | Value |
+|---|---|
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `Referrer-Policy` | `no-referrer` |
+| `Content-Security-Policy` | `default-src 'none'` |
+
 **Request validation:** All routes are decorated with `@validate_twilio_request` (`app/utils/twilio_validator.py`) — verifies the `X-Twilio-Signature` header against `TWILIO_AUTH_TOKEN` to reject spoofed requests.
+
+**IVR Greeting Audio (`app/utils/audio_shuffle.py`):**
+
+9 character-voice MP3 greeting clips are hosted on Twilio Assets (service `beabeacallme-1558`, visibility: Protected) at `https://your-service-name.twil.io/`. The clips were generated using [fish.audio](https://fish.audio/app) — an AI voice synthesis tool — using voices modeled after characters Bea recognizes (Bluey, Goofy, Leela, Minnie, Ms. Rachel, Prof. Farnsworth, Zoidberg, and two K-pop voices).
+
+The shuffle queue (`audio_shuffle.py`) exhausts all 9 clips before repeating, resetting on container restart. Source MP3 files are stored locally at `C:\dev\BeaBeaCallMe\IVR Audio\` (not in the repo).
 
 ### Google Drive
 
@@ -190,6 +207,10 @@ Container scan is gated to `main`-push only (slow Docker build); all other check
 | **Dependabot Alerts** | Notifies when dependencies have known CVEs |
 | **Dependabot Security Updates** | Auto-opens PRs to bump vulnerable packages |
 | **Dependabot Version Updates** | Weekly PRs for pip and GitHub Actions pins (grouped patch/minor) |
+
+### External Security Scanning
+
+[Aikido](https://aikido.dev) continuously scans `https://beabeacallme.siler.cloud` for web application vulnerabilities (missing security headers, exposed endpoints, misconfigurations, etc.).
 
 ### Deployment Workflow
 
@@ -285,3 +306,4 @@ BeaBeaCallMe/
 | **v1.5.2** | 2026-06-23 | Fix caller ID in recording callback (pass via query param); fix timestamp timezone to America/New_York |
 | **v1.5.3** | 2026-06-23 | Fix caller name lookup: URL-encode `+` in E.164 numbers passed as query param (`+` decodes as space otherwise) |
 | **v1.5.4** | 2026-06-23 | Strip whitespace from caller_id before CALLER_NAMES lookup (decoded `+` leaves a leading space) |
+| **v1.6.0** | 2026-06-23 | Add security response headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP); document fish.audio IVR greeting clips |
