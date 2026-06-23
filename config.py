@@ -15,13 +15,14 @@ class Config:
     TWILIO_ACCOUNT_SID = require_env("TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN = require_env("TWILIO_AUTH_TOKEN")
     TWILIO_PHONE_NUMBER = require_env("TWILIO_PHONE_NUMBER")
+    TWILIO_ASSET_BASE = require_env("TWILIO_ASSET_BASE")
 
     BASE_URL = require_env("BASE_URL").rstrip("/")
 
     DATA_DIR = os.getenv("DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
     RECORDINGS_DIR = os.path.join(DATA_DIR, "recordings")
 
-    SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
+    SECRET_KEY = require_env("FLASK_SECRET_KEY")
 
     GDRIVE_CREDENTIALS_PATH = require_env("GDRIVE_CREDENTIALS_PATH")
     GDRIVE_FOLDER_ID = require_env("GDRIVE_FOLDER_ID")
