@@ -1,10 +1,7 @@
 import logging
-import time
 from flask import Flask, jsonify
 from config import Config
 from app.utils.security_headers import add_security_headers
-
-START_TIME = time.time()
 
 
 def create_app():
@@ -25,7 +22,6 @@ def create_app():
 
     @app.get("/health")
     def health():
-        uptime_seconds = int(time.time() - START_TIME)
-        return jsonify({"status": "ok", "uptime_seconds": uptime_seconds})
+        return jsonify({"status": "ok"})
 
     return app
