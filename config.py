@@ -32,3 +32,11 @@ class Config:
         for n in os.getenv("ALLOWED_CALLERS", "").split(",")
         if n.strip()
     ]
+
+    # Comma-separated E.164:Name pairs for friendly filenames e.g. +1234567890:Bea
+    CALLER_NAMES = {
+        number: name
+        for entry in os.getenv("CALLER_NAMES", "").split(",")
+        if ":" in entry
+        for number, name in [entry.strip().split(":", 1)]
+    }
