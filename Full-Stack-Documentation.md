@@ -1,7 +1,7 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.6.1
-> **Last Updated:** 2026-06-22
+> **Version:** v1.6.2
+> **Last Updated:** 2026-06-23
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
 
@@ -43,7 +43,7 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
   │   Docker → Flask app :8080          │
   │     /call          IVR menu         │
   │     /voicemail     start recording  │
-  │     /voicemail/done  say goodbye    │
+  │     /voicemail/done  hang up        │
   │     /voicemail/callback             │
   │       ├─ download WAV from Twilio   │
   │       ├─ save to ./data/recordings/ │
@@ -70,11 +70,12 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
 | **cloudflared** | `cloudflare/cloudflared:latest` | Cloudflare tunnel connector |
 
 **Compose:**
-- `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only from `C:\dev\BeaBeaCallMe\` (local path avoids Google Drive virtual filesystem bind-mount issue).
+- `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only from a local path outside the Google Drive virtual filesystem (avoids Docker bind-mount issues with virtual drives).
 
 **Start/rebuild:**
 ```bash
-docker compose up -d --build
+git checkout main && git pull
+docker compose down && docker compose up -d --build
 ```
 
 ### Networking
@@ -116,7 +117,7 @@ A named tunnel (`beabeacallme`) runs as a Docker service alongside the app. The 
 | `POST /call` | `ivr` | Entry point — plays main menu ("press 1 to leave a voicemail") |
 | `POST /call/route` | `ivr` | Routes digit: `1` → redirect to `/voicemail`, else re-prompt |
 | `POST /voicemail` | `voicemail` | Says "leave a message after the beep", starts `<Record>` |
-| `POST /voicemail/done` | `voicemail` | Says "thank you, goodbye", hangs up |
+| `POST /voicemail/done` | `voicemail` | Hangs up |
 | `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive → SQLite log → delete from Twilio |
 
 **Security headers (`app/utils/security_headers.py`):**
@@ -136,7 +137,7 @@ Applied to every response via `app.after_request`:
 
 9 character-voice MP3 greeting clips are hosted on Twilio Assets (service `beabeacallme-1558`, visibility: Protected) at `https://your-service-name.twil.io/`. The clips were generated using [fish.audio](https://fish.audio/app) — an AI voice synthesis tool — using voices modeled after characters Bea recognizes (various character voices).
 
-The shuffle queue (`audio_shuffle.py`) exhausts all 9 clips before repeating, resetting on container restart. Source MP3 files are stored locally at `C:\dev\BeaBeaCallMe\IVR Audio\` (not in the repo).
+The shuffle queue (`audio_shuffle.py`) exhausts all 9 clips before repeating, resetting on container restart. Source MP3 files are stored locally outside the repo (not committed).
 
 ### Google Drive
 
@@ -165,7 +166,7 @@ The shuffle queue (`audio_shuffle.py`) exhausts all 9 clips before repeating, re
 | `created_at` | TEXT | ISO-8601 UTC timestamp |
 | `caller_id` | TEXT | Caller's phone number (from Twilio `From`) |
 | `duration` | INTEGER | Recording length in seconds |
-| `filename` | TEXT | Relative path under `recordings/` (e.g. `2026/06/22/2026-06-22_14-30-00_RExxxx.wav`) |
+| `filename` | TEXT | Recording filename (e.g. `Dustin-23JUN2026-4-41PM.wav`) |
 | `file_size` | INTEGER | Bytes |
 | `twilio_sid` | TEXT | Twilio `RecordingSid` |
 | `gdrive_file_id` | TEXT | Google Drive file ID (null if upload failed) |
@@ -223,7 +224,8 @@ Container scan is gated to `main`-push only (slow Docker build); all other check
 3. Push and open a PR — all checks run automatically
 4. Merge PR on GitHub (never push directly to main)
 5. Container scan runs on the merged main push
-6. `docker compose up -d --build` on the host to deploy
+6. `git checkout main && git pull` on the host to fetch the merged changes
+7. `docker compose down && docker compose up -d --build` on the host to deploy
 
 ---
 
@@ -242,7 +244,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all | `+15551234567,+15559876543` |
 | `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15551234567:Bea,+15559876543:Dustin` |
-| `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/gdrive-credentials.json` |
+| `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/secrets/gdrive-credentials.json` |
 | `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ADDIwQCL-VazUk9PVA` |
 
 ### Optional
@@ -273,7 +275,9 @@ BeaBeaCallMe/
 │   │   └── __init__.py
 │   └── utils/
 │       ├── __init__.py
+│       ├── audio_shuffle.py          # Shuffle queue for Twilio-hosted greeting MP3s
 │       ├── db.py                     # SQLite init and log_recording()
+│       ├── security_headers.py       # after_request security header injection
 │       ├── twilio_validator.py       # @validate_twilio_request decorator
 │       └── twiml.py                  # TwiML helper builders
 ├── data/
@@ -284,8 +288,8 @@ BeaBeaCallMe/
 ├── .env.template                     # Template with all config keys
 ├── .gitignore
 ├── CLAUDE.md                         # Project instructions for Claude Code
-├── docker-compose.yml                # Single-service compose (127.0.0.1:8080, ./data volume)
-├── Dockerfile                        # python:3.12-slim + gunicorn
+├── docker-compose.yml                # Two-service compose: app + cloudflared (127.0.0.1:8080, ./data volume)
+├── Dockerfile                        # python:3.13-slim + gunicorn
 ├── Full-Stack-Documentation.md       # This file
 ├── requirements.txt                  # Python dependencies
 └── run.py                            # App entry point (create_app())
@@ -312,3 +316,4 @@ BeaBeaCallMe/
 | **v1.5.4** | 2026-06-23 | Strip whitespace from caller_id before CALLER_NAMES lookup (decoded `+` leaves a leading space) |
 | **v1.6.0** | 2026-06-23 | Add security response headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP); document fish.audio IVR greeting clips |
 | **v1.6.1** | 2026-06-23 | Document UptimeRobot uptime monitoring (free tier, 5-min ping) |
+| **v1.6.2** | 2026-06-23 | Add `git pull` step to deployment workflow in docs |
