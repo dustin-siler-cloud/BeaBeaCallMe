@@ -6,7 +6,7 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - ./data:/app/data
-      - ./gdrive-credentials.json:/app/gdrive-credentials.json:ro
+      - C:\dev\BeaBeaCallMe\gdrive-credentials.json:/app/secrets/gdrive-credentials.json:ro
     env_file:
       - .env
 
