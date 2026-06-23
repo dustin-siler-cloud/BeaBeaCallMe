@@ -1,6 +1,7 @@
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests as http_requests
 from flask import Blueprint, request
@@ -25,10 +26,11 @@ def voicemail():
     """Prompt the caller to leave a message and start recording."""
     try:
         vr = VoiceResponse()
+        caller = request.form.get("From", "unknown")
         vr.say("Please leave your message after the beep.")
         vr.record(
             action=f"{Config.BASE_URL}/voicemail/done",
-            recording_status_callback=f"{Config.BASE_URL}/voicemail/callback",
+            recording_status_callback=f"{Config.BASE_URL}/voicemail/callback?from={caller}",
             recording_status_callback_method="POST",
             finish_on_key="",
             max_length=300,
@@ -65,7 +67,7 @@ def voicemail_callback():
         recording_sid = request.form.get("RecordingSid", "")
         recording_url = request.form.get("RecordingUrl", "")
         duration = request.form.get("RecordingDuration", 0)
-        caller_id = request.form.get("From", "unknown")
+        caller_id = request.args.get("from", request.form.get("From", "unknown"))
 
         logger.info(
             "Recording complete: sid=%s duration=%s from=%s",
@@ -74,7 +76,7 @@ def voicemail_callback():
             caller_id,
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(ZoneInfo("America/New_York"))
         date_path = now.strftime("%Y/%m/%d")
         caller_name = Config.CALLER_NAMES.get(caller_id, caller_id)
         timestamp = now.strftime("%d%b%Y-%-I-%M%p").upper()
