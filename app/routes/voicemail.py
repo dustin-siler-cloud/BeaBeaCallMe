@@ -76,8 +76,9 @@ def voicemail_callback():
 
         now = datetime.now(timezone.utc)
         date_path = now.strftime("%Y/%m/%d")
-        timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"{timestamp}_{recording_sid}.wav"
+        caller_name = Config.CALLER_NAMES.get(caller_id, caller_id)
+        timestamp = now.strftime("%d%b%Y-%-I-%M%p").upper()
+        filename = f"{caller_name}-{timestamp}.wav"
 
         save_dir = os.path.join(Config.RECORDINGS_DIR, date_path)
         os.makedirs(save_dir, exist_ok=True)
