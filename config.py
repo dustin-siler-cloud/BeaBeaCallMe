@@ -25,3 +25,10 @@ class Config:
 
     GDRIVE_CREDENTIALS_PATH = require_env("GDRIVE_CREDENTIALS_PATH")
     GDRIVE_FOLDER_ID = require_env("GDRIVE_FOLDER_ID")
+
+    # Comma-separated E.164 numbers allowed to call in; empty = allow all
+    ALLOWED_CALLERS = [
+        n.strip()
+        for n in os.getenv("ALLOWED_CALLERS", "").split(",")
+        if n.strip()
+    ]
