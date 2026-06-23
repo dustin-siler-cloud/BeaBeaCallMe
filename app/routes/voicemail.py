@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -80,6 +81,7 @@ def voicemail_callback():
         date_path = now.strftime("%Y/%m/%d")
         normalized = caller_id.strip()
         caller_name = Config.CALLER_NAMES.get(normalized) or Config.CALLER_NAMES.get("+" + normalized, normalized)
+        caller_name = re.sub(r"[^A-Za-z0-9_\-]", "_", caller_name)
         timestamp = now.strftime("%d%b%Y-%-I-%M%p").upper()
         filename = f"{caller_name}-{timestamp}.wav"
 
