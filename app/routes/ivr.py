@@ -15,7 +15,15 @@ ivr_bp = Blueprint("ivr", __name__)
 def call():
     """Entry point for all incoming calls — presents the main menu."""
     try:
-        logger.info("Incoming call from %s", request.form.get("From", "unknown"))
+        caller = request.form.get("From", "unknown")
+        logger.info("Incoming call from %s", caller)
+
+        if Config.ALLOWED_CALLERS and caller not in Config.ALLOWED_CALLERS:
+            logger.warning("Rejected call from unlisted number: %s", caller)
+            vr = VoiceResponse()
+            vr.reject()
+            return twiml_response(vr)
+
         return main_menu_twiml()
     except Exception:
         logger.exception("Error in /call")
