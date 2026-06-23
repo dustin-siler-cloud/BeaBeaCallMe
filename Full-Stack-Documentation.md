@@ -240,12 +240,12 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `TWILIO_ACCOUNT_SID` | Twilio account SID | `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token (also used for request validation) | `your_auth_token_here` |
 | `TWILIO_PHONE_NUMBER` | Twilio phone number | `+15550000000` |
-| `BASE_URL` | Public tunnel URL (no trailing slash) | `https://beabeacallme.siler.cloud` |
+| `BASE_URL` | Public tunnel URL (no trailing slash) | `https://your-tunnel.your-domain.com` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all | `+15551234567,+15559876543` |
-| `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15551234567:Bea,+15559876543:Dustin` |
-| `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/secrets/gdrive-credentials.json` |
-| `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ADDIwQCL-VazUk9PVA` |
+| `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15550001111:Bea,+15550002222:Dustin` |
+| `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/secrets/your-credentials-file.json` |
+| `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ABCDEFGHIJKLMNOPabcd` |
 
 ### Optional
 
