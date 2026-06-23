@@ -78,7 +78,8 @@ def voicemail_callback():
 
         now = datetime.now(ZoneInfo("America/New_York"))
         date_path = now.strftime("%Y/%m/%d")
-        caller_name = Config.CALLER_NAMES.get(caller_id) or Config.CALLER_NAMES.get("+" + caller_id, caller_id)
+        normalized = caller_id.strip()
+        caller_name = Config.CALLER_NAMES.get(normalized) or Config.CALLER_NAMES.get("+" + normalized, normalized)
         timestamp = now.strftime("%d%b%Y-%-I-%M%p").upper()
         filename = f"{caller_name}-{timestamp}.wav"
 
