@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.5.0
+> **Version:** v1.5.1
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -216,6 +216,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `BASE_URL` | Public tunnel URL (no trailing slash) | `https://beabeacallme.siler.cloud` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all | `+15551234567,+15559876543` |
+| `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15551234567:Bea,+15559876543:Dustin` |
 | `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/gdrive-credentials.json` |
 | `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ADDIwQCL-VazUk9PVA` |
 
@@ -280,3 +281,4 @@ BeaBeaCallMe/
 | **v1.3.1** | 2026-06-23 | Add caller allowlist: `ALLOWED_CALLERS` env var; unknown callers are rejected via `<Reject>` TwiML before hearing the IVR |
 | **v1.4.0** | 2026-06-23 | Fix GDrive upload: switch to Shared Drive (`BeaBea-Tincan-Audio`), `drive` scope, `supportsAllDrives=True`; move credentials file to `C:\dev\BeaBeaCallMe\` to fix Docker bind-mount issue on Google Drive virtual filesystem; add `.dockerignore` |
 | **v1.5.0** | 2026-06-23 | IVR greeting shuffle: replace `<Say>` with `<Play>` using 9 character voice MP3s hosted on Twilio Assets (`beabeacallme-1558.twil.io`); shuffle queue exhausts all clips before repeating; recording saves on hang-up (`finish_on_key=""`) |
+| **v1.5.1** | 2026-06-23 | Friendly recording filenames: `CALLER_NAMES` env var maps E.164 numbers to names; files named `Ashley-23JUN2026-4-41PM.wav` instead of timestamp+SID |
