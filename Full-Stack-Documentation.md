@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.6.0
+> **Version:** v1.6.1
 > **Last Updated:** 2026-06-22
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -212,6 +212,10 @@ Container scan is gated to `main`-push only (slow Docker build); all other check
 
 [Aikido](https://aikido.dev) continuously scans `https://beabeacallme.siler.cloud` for web application vulnerabilities (missing security headers, exposed endpoints, misconfigurations, etc.).
 
+### Uptime Monitoring
+
+[UptimeRobot](https://uptimerobot.com) monitors `https://beabeacallme.siler.cloud/health` on the free tier (5-minute ping interval).
+
 ### Deployment Workflow
 
 1. Create a feature branch (`feat/`, `fix/`, `ci/`, `chore/`)
@@ -307,3 +311,4 @@ BeaBeaCallMe/
 | **v1.5.3** | 2026-06-23 | Fix caller name lookup: URL-encode `+` in E.164 numbers passed as query param (`+` decodes as space otherwise) |
 | **v1.5.4** | 2026-06-23 | Strip whitespace from caller_id before CALLER_NAMES lookup (decoded `+` leaves a leading space) |
 | **v1.6.0** | 2026-06-23 | Add security response headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP); document fish.audio IVR greeting clips |
+| **v1.6.1** | 2026-06-23 | Document UptimeRobot uptime monitoring (free tier, 5-min ping) |
