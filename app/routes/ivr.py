@@ -5,7 +5,6 @@ from twilio.twiml.voice_response import VoiceResponse
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, main_menu_twiml, twiml_response
 from config import Config
-from config import Config
 
 logger = logging.getLogger(__name__)
 ivr_bp = Blueprint("ivr", __name__)
