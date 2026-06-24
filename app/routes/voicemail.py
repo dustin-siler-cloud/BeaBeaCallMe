@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import requests as http_requests
@@ -31,7 +32,7 @@ def voicemail():
         vr.say("Please leave your message after the beep.")
         vr.record(
             action=f"{Config.BASE_URL}/voicemail/done",
-            recording_status_callback=f"{Config.BASE_URL}/voicemail/callback?from={caller}",
+            recording_status_callback=f"{Config.BASE_URL}/voicemail/callback?from={quote(caller, safe='')}",
             recording_status_callback_method="POST",
             finish_on_key="",
             max_length=300,
@@ -69,18 +70,18 @@ def voicemail_callback():
         recording_url = request.form.get("RecordingUrl", "")
         duration = request.form.get("RecordingDuration", 0)
         caller_id = request.args.get("from", request.form.get("From", "unknown"))
+        safe_caller_id = re.sub(r"[^A-Za-z0-9+\-]", "_", caller_id)
 
         logger.info(
             "Recording complete: sid=%s duration=%s from=%s",
             recording_sid,
             duration,
-            caller_id,
+            safe_caller_id,
         )
 
         now = datetime.now(ZoneInfo("America/New_York"))
         date_path = now.strftime("%Y/%m/%d")
-        normalized = caller_id.strip()
-        caller_name = Config.CALLER_NAMES.get(normalized) or Config.CALLER_NAMES.get("+" + normalized, normalized)
+        caller_name = Config.CALLER_NAMES.get(caller_id, caller_id)
         caller_name = re.sub(r"[^A-Za-z0-9_\-]", "_", caller_name)
         timestamp = now.strftime("%d%b%Y-%-I-%M%p").upper()
         filename = f"{caller_name}-{timestamp}.wav"

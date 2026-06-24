@@ -1,4 +1,5 @@
 import logging
+import re
 from flask import Blueprint, request
 from twilio.twiml.voice_response import VoiceResponse
 
@@ -16,10 +17,11 @@ def call():
     """Entry point for all incoming calls — presents the main menu."""
     try:
         caller = request.form.get("From", "unknown")
-        logger.info("Incoming call from %s", caller)
+        safe_caller = re.sub(r"[^A-Za-z0-9+\-]", "_", caller)
+        logger.info("Incoming call from %s", safe_caller)
 
         if Config.ALLOWED_CALLERS and caller not in Config.ALLOWED_CALLERS:
-            logger.warning("Rejected call from unlisted number: %s", caller)
+            logger.warning("Rejected call from unlisted number: %s", safe_caller)
             vr = VoiceResponse()
             vr.reject()
             return twiml_response(vr)

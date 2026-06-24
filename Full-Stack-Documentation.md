@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.7.0
+> **Version:** v1.7.1
 > **Last Updated:** 2026-06-23
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -319,3 +319,4 @@ BeaBeaCallMe/
 | **v1.6.1** | 2026-06-23 | Document UptimeRobot uptime monitoring (free tier, 5-min ping) |
 | **v1.6.2** | 2026-06-23 | Add `git pull` step to deployment workflow in docs |
 | **v1.7.0** | 2026-06-23 | Security hardening: move Twilio asset base URL to `TWILIO_ASSET_BASE` env var; make `FLASK_SECRET_KEY` required; sanitize caller name before filesystem use; remove uptime from `/health`; add HSTS header; add `CLAUDE.md` to `.gitignore`; delete obsolete `recover.sh`; rewrite `.env.template` |
+| **v1.7.1** | 2026-06-23 | Security pass 2: sanitize caller before logging (log injection); URL-encode caller in callback URL; thread-safe audio shuffle queue; pin cloudflared to 2026.6.1; remove TruffleHog --only-verified |
