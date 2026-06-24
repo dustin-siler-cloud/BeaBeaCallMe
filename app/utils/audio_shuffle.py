@@ -5,16 +5,13 @@ import threading
 _TWILIO_ASSET_BASE = os.environ["TWILIO_ASSET_BASE"].rstrip("/")
 
 _GREETING_CLIPS = [
-    "IVR-1-Intro-Clip1.mp3",
-    "IVR-1-Intro-Clip2.mp3",
-    "IVR-1-Intro-Clip3.mp3",
-    "IVR-1-Intro-Clip4.mp3",
-    "IVR-1-Intro-Clip5.mp3",
-    "IVR-1-Intro-Clip6.mp3",
-    "IVR-1-Intro-Clip7.mp3",
-    "IVR-1-Intro-Clip8.mp3",
-    "IVR-1-Intro-Clip9.mp3",
+    clip.strip()
+    for clip in os.environ["TWILIO_GREETING_CLIPS"].split(",")
+    if clip.strip()
 ]
+
+if not _GREETING_CLIPS:
+    raise RuntimeError("Missing required environment variable: TWILIO_GREETING_CLIPS")
 
 _queue: list[str] = []
 _lock = threading.Lock()
