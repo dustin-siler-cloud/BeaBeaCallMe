@@ -56,8 +56,6 @@ jobs:
 
       - name: TruffleHog — scan git history
         uses: trufflesecurity/trufflehog@v3.95.6
-        with:
-          extra_args: --only-verified
 
   dockerfile-lint:
     name: Dockerfile Lint

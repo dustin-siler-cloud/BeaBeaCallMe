@@ -1,5 +1,6 @@
 import os
 import random
+import threading
 
 _TWILIO_ASSET_BASE = os.environ["TWILIO_ASSET_BASE"].rstrip("/")
 
@@ -16,6 +17,7 @@ _GREETING_CLIPS = [
 ]
 
 _queue: list[str] = []
+_lock = threading.Lock()
 
 
 def _refill() -> None:
@@ -25,7 +27,8 @@ def _refill() -> None:
 
 
 def next_greeting_url() -> str:
-    if not _queue:
-        _refill()
-    clip = _queue.pop(0)
+    with _lock:
+        if not _queue:
+            _refill()
+        clip = _queue.pop(0)
     return f"{_TWILIO_ASSET_BASE}/{clip}"
