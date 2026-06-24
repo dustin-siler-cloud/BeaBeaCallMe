@@ -1,8 +1,8 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.7.2
+> **Version:** v1.8.0
 > **Last Updated:** 2026-06-23
-> **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
+> **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
 
 ---
@@ -67,7 +67,7 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
 | Component | Image | Purpose |
 |---|---|---|
 | **App** | `python:3.13-slim` | Flask IVR app + GDrive uploader |
-| **cloudflared** | `cloudflare/cloudflared:latest` | Cloudflare tunnel connector |
+| **cloudflared** | `cloudflare/cloudflared:2026.6.1` | Cloudflare tunnel connector |
 
 **Compose:**
 - `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only from a local path outside the Google Drive virtual filesystem (avoids Docker bind-mount issues with virtual drives).
@@ -88,7 +88,7 @@ docker compose down && docker compose up -d --build
 
 ### Cloudflare Tunnel
 
-A named tunnel (`beabeacallme`) runs as a Docker service alongside the app. The `cloudflared` container connects outbound to Cloudflare's edge and routes `https://beabeacallme.siler.cloud` → `http://app:8080` (Docker service name). No open inbound ports required. Token stored in `.env` as `CLOUDFLARE_TUNNEL_TOKEN`.
+A named Cloudflare tunnel runs as a Docker service alongside the app. The `cloudflared` container connects outbound to Cloudflare's edge and routes your public hostname → `http://app:8080` (Docker service name). No open inbound ports required. Token stored in `.env` as `CLOUDFLARE_TUNNEL_TOKEN`.
 
 ---
 
@@ -167,7 +167,7 @@ The shuffle queue (`audio_shuffle.py`) exhausts all clips before repeating, rese
 | `created_at` | TEXT | ISO-8601 UTC timestamp |
 | `caller_id` | TEXT | Caller's phone number (from Twilio `From`) |
 | `duration` | INTEGER | Recording length in seconds |
-| `filename` | TEXT | Recording filename (e.g. `Dustin-23JUN2026-4-41PM.wav`) |
+| `filename` | TEXT | Recording filename (e.g. `Caller-23JUN2026-4-41PM.wav`) |
 | `file_size` | INTEGER | Bytes |
 | `twilio_sid` | TEXT | Twilio `RecordingSid` |
 | `gdrive_file_id` | TEXT | Google Drive file ID (null if upload failed) |
@@ -322,3 +322,4 @@ BeaBeaCallMe/
 | **v1.7.0** | 2026-06-23 | Security hardening: move Twilio asset base URL to `TWILIO_ASSET_BASE` env var; make `FLASK_SECRET_KEY` required; sanitize caller name before filesystem use; remove uptime from `/health`; add HSTS header; add `CLAUDE.md` to `.gitignore`; delete obsolete `recover.sh`; rewrite `.env.template` |
 | **v1.7.1** | 2026-06-23 | Security pass 2: sanitize caller before logging (log injection); URL-encode caller in callback URL; thread-safe audio shuffle queue; pin cloudflared to 2026.6.1; remove TruffleHog --only-verified |
 | **v1.7.2** | 2026-06-23 | Move IVR greeting clip filenames to `TWILIO_GREETING_CLIPS` env var; remove character names from source and docs |
+| **v1.8.0** | 2026-06-24 | Pre-publication: anonymize doc (remove personal names and instance-specific URLs); add README, SECURITY.md; branch protection; disable wiki and issues; enable vulnerability alerts |
