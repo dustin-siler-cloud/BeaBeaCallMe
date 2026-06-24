@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.9.0
+> **Version:** v1.9.1
 > **Last Updated:** 2026-06-24
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -12,6 +12,7 @@
 - [Architecture Overview](#architecture-overview)
 - [Infrastructure](#infrastructure)
 - [Backend Stack](#backend-stack)
+- [Notifications](#notifications)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Configuration Reference](#configuration-reference)
 - [Project Structure](#project-structure)
@@ -130,7 +131,7 @@ Applied to every response via `app.after_request`:
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `DENY` |
 | `Referrer-Policy` | `no-referrer` |
-| `Content-Security-Policy` | `default-src 'none'` |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'; form-action 'none'` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
 
 **Request validation:** All routes are decorated with `@validate_twilio_request` (`app/utils/twilio_validator.py`) — verifies the `X-Twilio-Signature` header against `TWILIO_AUTH_TOKEN` to reject spoofed requests.
@@ -174,6 +175,18 @@ The shuffle queue (`audio_shuffle.py`) exhausts all clips before repeating, rese
 | `gdrive_file_id` | TEXT | Google Drive file ID (null if upload failed) |
 
 Recordings are saved locally under `./data/recordings/YYYY/MM/DD/` and mirrored to Drive.
+
+### Notifications
+
+**Slack (`app/utils/slack.py`):**
+
+After each successful voicemail save, the app posts a message to a configured Slack channel via an incoming webhook. The message includes:
+- Caller's friendly name (from `CALLER_NAMES`)
+- Timestamp of the recording (Eastern time)
+- Duration in seconds
+- Direct link to the file in Google Drive (`https://drive.google.com/file/d/{file_id}/view`)
+
+The webhook is configured via `SLACK_WEBHOOK_URL` in `.env`. If the variable is unset, notifications are silently skipped — no error is raised. Slack failures are logged as warnings and do not affect the recording save or Twilio callback response.
 
 ---
 
@@ -326,3 +339,4 @@ BeaBeaCallMe/
 | **v1.7.2** | 2026-06-23 | Move IVR greeting clip filenames to `TWILIO_GREETING_CLIPS` env var; remove character names from source and docs |
 | **v1.8.0** | 2026-06-24 | Pre-publication: anonymize doc (remove personal names and instance-specific URLs); add README, SECURITY.md; branch protection; disable wiki and issues; enable vulnerability alerts |
 | **v1.9.0** | 2026-06-24 | Slack notifications: post to a configured channel when a new voicemail arrives, including caller name, timestamp, duration, and a direct Google Drive link; `SLACK_WEBHOOK_URL` env var (optional) |
+| **v1.9.1** | 2026-06-24 | Fix CSP header: add explicit `frame-ancestors 'none'` and `form-action 'none'` directives (do not inherit from `default-src`); update doc CSP table and add Notifications section |
