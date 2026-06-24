@@ -12,6 +12,7 @@ from twilio.twiml.voice_response import VoiceResponse
 
 from app.gdrive import upload_recording
 from app.utils.db import init_db, log_recording
+from app.utils.slack import notify_new_recording
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, twiml_response
 from config import Config
@@ -120,6 +121,8 @@ def voicemail_callback():
             twilio_sid=recording_sid,
             gdrive_file_id=drive_file_id,
         )
+
+        notify_new_recording(caller_name, timestamp, int(duration), drive_file_id)
 
         # Delete from Twilio to avoid storage costs
         _delete_from_twilio(recording_sid)
