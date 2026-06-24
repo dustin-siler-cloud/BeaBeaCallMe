@@ -1,55 +1,66 @@
-# Family Call Center (Public)
-> **Note:** This repository is unmaintained, unsupported, and shared as-is as untested example code.
-This is a voicemail-only Flask + Twilio app.
-When a caller reaches `/call`, they hear one option:
-- Press **1** to leave a voicemail.
+# BeaBeaCallMe
 
-The app records voicemail audio, stores it under `data/recordings/YYYY/MM/DD/`, logs metadata in `data/ivr.db`, and then deletes the recording from Twilio.
+Self-hosted IVR voicemail system for a kids' phone. A child calls a Twilio number, presses 1, leaves a message, and the recording is automatically saved to Google Drive.
 
-## Why this repo exists
-This repo is a lightweight public wrapper around my personal project so people can see the rough implementation.
-I’ll add a link to the full write-up here once it’s published.
+## How it works
 
-## Project status and disclaimers
-- This project is shared as an **example/sketch**, not production-ready software.
-- I am **not providing support** for this repository.
-- The code is **lightly tested / untested in many environments**.
-- Reuse or adapt it at your own risk.
-- Treat this as a starting point for experimentation, not a maintained package.
-
-## Setup
-1. Copy the environment template:
-```bash
-cp .env.template .env
 ```
-2. Fill in values in `.env`.
-3. Install dependencies:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-4. Run the app:
-```bash
-python run.py
+Child's phone → Twilio (IVR) → Cloudflare Tunnel → Flask app → Google Drive
 ```
 
-## Twilio webhook
-In Twilio phone number settings:
-- Voice webhook URL: `https://your-public-hostname.example.com/call`
-- Method: `POST`
+- Twilio handles the inbound call and plays a randomized greeting clip
+- The caller presses 1 and leaves a message; recording saves on hang-up
+- The Flask app downloads the WAV, saves it locally, and uploads it to a Google Shared Drive
+- Recordings are named by caller (e.g. `Bea-24JUN2026-3-15PM.wav`) using a configurable name map
 
-## Endpoints
-- `POST /call` — main menu (Press 1 for voicemail)
-- `POST /call/route` — routes keypad selection
-- `POST /voicemail` — starts recording
-- `POST /voicemail/done` — thanks caller and hangs up
-- `POST /voicemail/callback` — receives recording callback and saves audio
-- `GET /health` — basic health check
+## Stack
 
-## Optional macOS service files
-Template files are included:
-- `com.family.ivr.plist`
-- `family-ivr.newsyslog.conf`
+- **Flask** + **Gunicorn** — IVR webhook handler
+- **Twilio** — managed phone number, TwiML IVR, recording
+- **Twilio Assets** — hosts MP3 greeting clips (protected visibility)
+- **Google Drive API** — uploads recordings to a Shared Drive via service account
+- **Cloudflare Tunnel** — exposes the local app publicly without open ports
+- **Docker + Docker Compose** — containerized deployment
+- **SQLite** — local recording metadata log
 
-Replace placeholder paths before using them.
+## Quick start
+
+1. **Clone and configure**
+
+   ```bash
+   git clone https://github.com/dustin-siler-cloud/BeaBeaCallMe.git
+   cd BeaBeaCallMe
+   cp .env.template .env
+   # Fill in all values in .env
+   ```
+
+2. **Set up prerequisites**
+   - A [Twilio](https://twilio.com) account with a phone number and a Functions/Assets service for hosting MP3 greeting clips
+   - A Google Cloud service account with access to a Google Shared Drive
+   - A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) configured to route your public hostname to `http://app:8080`
+
+3. **Place credentials**
+
+   Put your Google service account JSON key somewhere on your local filesystem (outside any cloud-synced directory) and update the volume mount path in `docker-compose.yml`.
+
+4. **Run**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+5. **Configure Twilio webhook**
+
+   Point your Twilio number's incoming voice webhook to `https://your-public-hostname/call` (HTTP POST).
+
+See [`Full-Stack-Documentation.md`](Full-Stack-Documentation.md) for the complete reference.
+
+## Security
+
+All Twilio webhook routes are validated via `X-Twilio-Signature`. Inbound callers are filtered by an allowlist (`ALLOWED_CALLERS`). Credentials never touch the repo — see [`.env.template`](.env.template) for the full configuration surface.
+
+To report a security vulnerability, see [`SECURITY.md`](SECURITY.md).
+
+## License
+
+No license is currently specified. All rights reserved.
