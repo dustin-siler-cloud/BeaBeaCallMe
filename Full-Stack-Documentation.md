@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.7.1
+> **Version:** v1.7.2
 > **Last Updated:** 2026-06-23
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe (private)
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -136,9 +136,9 @@ Applied to every response via `app.after_request`:
 
 **IVR Greeting Audio (`app/utils/audio_shuffle.py`):**
 
-9 character-voice MP3 greeting clips are hosted on Twilio Assets (service `beabeacallme-1558`, visibility: Protected) at `https://your-service-name.twil.io/`. The clips were generated using [fish.audio](https://fish.audio/app) — an AI voice synthesis tool — using voices modeled after characters Bea recognizes (various character voices).
+IVR greeting MP3 clips are hosted on Twilio Assets (visibility: Protected) at the URL configured in `TWILIO_ASSET_BASE`. Filenames are configured via `TWILIO_GREETING_CLIPS` (comma-separated, stored in `.env`). Clips were generated using [fish.audio](https://fish.audio/app).
 
-The shuffle queue (`audio_shuffle.py`) exhausts all 9 clips before repeating, resetting on container restart. Source MP3 files are stored locally outside the repo (not committed).
+The shuffle queue (`audio_shuffle.py`) exhausts all clips before repeating, resetting on container restart. Source MP3 files are stored locally outside the repo (not committed).
 
 ### Google Drive
 
@@ -242,6 +242,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `TWILIO_AUTH_TOKEN` | Twilio auth token (also used for request validation) | `your_auth_token_here` |
 | `TWILIO_PHONE_NUMBER` | Twilio phone number | `+15550000000` |
 | `TWILIO_ASSET_BASE` | Twilio Assets service base URL (no trailing slash) | `https://your-service-name.twil.io` |
+| `TWILIO_GREETING_CLIPS` | Comma-separated MP3 filenames hosted on Twilio Assets | `greeting-01.mp3,greeting-02.mp3` |
 | `BASE_URL` | Public tunnel URL (no trailing slash) | `https://your-tunnel.your-domain.com` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `FLASK_SECRET_KEY` | Flask session secret — generate with `python -c "import secrets; print(secrets.token_hex(32))"` | (long random string) |
@@ -310,7 +311,7 @@ BeaBeaCallMe/
 | **v1.3.0** | 2026-06-22 | Add Cloudflare tunnel: `cloudflared` service in docker-compose, named tunnel `beabeacallme` routing `https://beabeacallme.siler.cloud` → `http://app:8080`; `CLOUDFLARE_TUNNEL_TOKEN` env var |
 | **v1.3.1** | 2026-06-23 | Add caller allowlist: `ALLOWED_CALLERS` env var; unknown callers are rejected via `<Reject>` TwiML before hearing the IVR |
 | **v1.4.0** | 2026-06-23 | Fix GDrive upload: switch to Shared Drive (`BeaBea-Tincan-Audio`), `drive` scope, `supportsAllDrives=True`; move credentials file to `C:\dev\BeaBeaCallMe\` to fix Docker bind-mount issue on Google Drive virtual filesystem; add `.dockerignore` |
-| **v1.5.0** | 2026-06-23 | IVR greeting shuffle: replace `<Say>` with `<Play>` using 9 character voice MP3s hosted on Twilio Assets (`your-service-name.twil.io`); shuffle queue exhausts all clips before repeating; recording saves on hang-up (`finish_on_key=""`) |
+| **v1.5.0** | 2026-06-23 | IVR greeting shuffle: replace `<Say>` with `<Play>` using MP3s hosted on Twilio Assets; shuffle queue exhausts all clips before repeating; recording saves on hang-up (`finish_on_key=""`) |
 | **v1.5.1** | 2026-06-23 | Friendly recording filenames: `CALLER_NAMES` env var maps E.164 numbers to names; files named `Ashley-23JUN2026-4-41PM.wav` instead of timestamp+SID |
 | **v1.5.2** | 2026-06-23 | Fix caller ID in recording callback (pass via query param); fix timestamp timezone to America/New_York |
 | **v1.5.3** | 2026-06-23 | Fix caller name lookup: URL-encode `+` in E.164 numbers passed as query param (`+` decodes as space otherwise) |
@@ -320,3 +321,4 @@ BeaBeaCallMe/
 | **v1.6.2** | 2026-06-23 | Add `git pull` step to deployment workflow in docs |
 | **v1.7.0** | 2026-06-23 | Security hardening: move Twilio asset base URL to `TWILIO_ASSET_BASE` env var; make `FLASK_SECRET_KEY` required; sanitize caller name before filesystem use; remove uptime from `/health`; add HSTS header; add `CLAUDE.md` to `.gitignore`; delete obsolete `recover.sh`; rewrite `.env.template` |
 | **v1.7.1** | 2026-06-23 | Security pass 2: sanitize caller before logging (log injection); URL-encode caller in callback URL; thread-safe audio shuffle queue; pin cloudflared to 2026.6.1; remove TruffleHog --only-verified |
+| **v1.7.2** | 2026-06-23 | Move IVR greeting clip filenames to `TWILIO_GREETING_CLIPS` env var; remove character names from source and docs |
