@@ -1,7 +1,7 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.8.0
-> **Last Updated:** 2026-06-23
+> **Version:** v1.9.0
+> **Last Updated:** 2026-06-24
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
 
@@ -49,6 +49,7 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
   │       ├─ save to ./data/recordings/ │
   │       ├─ upload to Google Drive     │
   │       ├─ log to SQLite              │
+  │       ├─ send Slack notification    │
   │       └─ delete from Twilio         │
   └─────────────────────────────────────┘
          │  Google Drive API (service account)
@@ -118,7 +119,7 @@ A named Cloudflare tunnel runs as a Docker service alongside the app. The `cloud
 | `POST /call/route` | `ivr` | Routes digit: `1` → redirect to `/voicemail`, else re-prompt |
 | `POST /voicemail` | `voicemail` | Says "leave a message after the beep", starts `<Record>` |
 | `POST /voicemail/done` | `voicemail` | Hangs up |
-| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive → SQLite log → delete from Twilio |
+| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive → SQLite log → Slack notification → delete from Twilio |
 
 **Security headers (`app/utils/security_headers.py`):**
 
@@ -250,6 +251,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15550001111:Bea,+15550002222:Dustin` |
 | `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/secrets/your-credentials-file.json` |
 | `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ABCDEFGHIJKLMNOPabcd` |
+| `SLACK_WEBHOOK_URL` | Slack incoming webhook URL for new voicemail notifications (optional) | `https://hooks.slack.com/services/...` |
 
 ### Optional
 
@@ -323,3 +325,4 @@ BeaBeaCallMe/
 | **v1.7.1** | 2026-06-23 | Security pass 2: sanitize caller before logging (log injection); URL-encode caller in callback URL; thread-safe audio shuffle queue; pin cloudflared to 2026.6.1; remove TruffleHog --only-verified |
 | **v1.7.2** | 2026-06-23 | Move IVR greeting clip filenames to `TWILIO_GREETING_CLIPS` env var; remove character names from source and docs |
 | **v1.8.0** | 2026-06-24 | Pre-publication: anonymize doc (remove personal names and instance-specific URLs); add README, SECURITY.md; branch protection; disable wiki and issues; enable vulnerability alerts |
+| **v1.9.0** | 2026-06-24 | Slack notifications: post to a configured channel when a new voicemail arrives, including caller name, timestamp, duration, and a direct Google Drive link; `SLACK_WEBHOOK_URL` env var (optional) |
