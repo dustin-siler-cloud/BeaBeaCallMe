@@ -2,11 +2,11 @@ import logging
 import os
 import re
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from zoneinfo import ZoneInfo
 
 import requests as http_requests
-from flask import Blueprint, request
+from flask import Blueprint, abort, request
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse
 
@@ -93,6 +93,10 @@ def voicemail_callback():
 
         # Download the recording from Twilio (mp3 -> wav via URL param)
         audio_url = f"{recording_url}.wav"
+        parsed = urlparse(audio_url)
+        if not parsed.hostname or not parsed.hostname.endswith(".twilio.com"):
+            logger.warning("Rejected non-Twilio recording URL: %s", parsed.hostname)
+            abort(400)
         response = http_requests.get(
             audio_url,
             auth=(Config.TWILIO_ACCOUNT_SID, Config.TWILIO_AUTH_TOKEN),

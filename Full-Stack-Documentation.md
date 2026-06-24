@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.9.1
+> **Version:** v1.9.2
 > **Last Updated:** 2026-06-24
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -340,3 +340,4 @@ BeaBeaCallMe/
 | **v1.8.0** | 2026-06-24 | Pre-publication: anonymize doc (remove personal names and instance-specific URLs); add README, SECURITY.md; branch protection; disable wiki and issues; enable vulnerability alerts |
 | **v1.9.0** | 2026-06-24 | Slack notifications: post to a configured channel when a new voicemail arrives, including caller name, timestamp, duration, and a direct Google Drive link; `SLACK_WEBHOOK_URL` env var (optional) |
 | **v1.9.1** | 2026-06-24 | Fix CSP header: add explicit `frame-ancestors 'none'` and `form-action 'none'` directives (do not inherit from `default-src`); update doc CSP table and add Notifications section |
+| **v1.9.2** | 2026-06-24 | Pin all GitHub Actions to commit SHAs; add non-root `appuser` to Dockerfile; validate recording URL is a `.twilio.com` host before fetching (SSRF mitigation) |
