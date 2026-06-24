@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.9.3
+> **Version:** v1.9.4
 > **Last Updated:** 2026-06-24
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -75,7 +75,7 @@ Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1
 - `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only from a local path outside the Google Drive virtual filesystem (avoids Docker bind-mount issues with virtual drives).
 
 **Non-root container user:**
-The app runs as `appuser` (no password, no shell). An `entrypoint.sh` script runs first as root to `chown /app/data` to `appuser` (the bind-mounted `./data` volume arrives owned by root), then hands off to `gosu appuser gunicorn`.
+The app runs as `appuser` (no password, no shell). An `entrypoint.sh` script runs first as root to `chown /app/data` to `appuser` (the bind-mounted `./data` volume arrives owned by root), then uses Python's `os.setuid`/`os.setgid` to drop privileges before exec-ing gunicorn. No external privilege-drop utility is required, avoiding Go stdlib CVEs that would otherwise appear in container scans.
 
 **Start/rebuild:**
 ```bash
@@ -345,3 +345,4 @@ BeaBeaCallMe/
 | **v1.9.1** | 2026-06-24 | Fix CSP header: add explicit `frame-ancestors 'none'` and `form-action 'none'` directives (do not inherit from `default-src`); update doc CSP table and add Notifications section |
 | **v1.9.2** | 2026-06-24 | Pin all GitHub Actions to commit SHAs; add non-root `appuser` to Dockerfile; validate recording URL is a `.twilio.com` host before fetching (SSRF mitigation) |
 | **v1.9.3** | 2026-06-24 | Fix data volume permissions: add `entrypoint.sh` + `gosu` to `chown /app/data` to `appuser` at container start before handing off to gunicorn |
+| **v1.9.4** | 2026-06-24 | Replace `gosu` with Python `os.setuid`/`os.setgid` in `entrypoint.sh` to eliminate Go stdlib CVEs introduced by the gosu binary |
