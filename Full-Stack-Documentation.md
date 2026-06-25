@@ -1,14 +1,30 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.9.5
+> **Version:** v1.9.6
 > **Last Updated:** 2026-06-24
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
 
 ---
 
+## Monthly Costs
+
+| Service | Cost | Notes |
+|---|---|---|
+| **Twilio phone number** | ~$1.15/mo | Required — inbound voice number |
+| **Twilio inbound calls** | ~$0.0085/min | Negligible at typical usage (a few short calls/mo) |
+| **Cloudflare Tunnel** | Free | Named tunnel, no bandwidth cap for this use case |
+| **Google Drive** | Free | Storage via existing Google account |
+| **GitHub** | Free | Public repo |
+| **Tin Can Party Line** | $9.99/mo | **Optional** — subscription that enables the Tin Can kids' phone to make outbound calls; this project works with any phone as long as its number is in `ALLOWED_CALLERS` |
+
+**Estimated required spend: ~$1.15/mo.** The Tin Can subscription is optional and independent of this project.
+
+---
+
 ## Table of Contents
 
+- [Monthly Costs](#monthly-costs)
 - [Architecture Overview](#architecture-overview)
 - [Infrastructure](#infrastructure)
 - [Backend Stack](#backend-stack)
@@ -347,3 +363,4 @@ BeaBeaCallMe/
 | **v1.9.3** | 2026-06-24 | Fix data volume permissions: add `entrypoint.sh` + `gosu` to `chown /app/data` to `appuser` at container start before handing off to gunicorn |
 | **v1.9.4** | 2026-06-24 | Replace `gosu` with Python `os.setuid`/`os.setgid` in `entrypoint.sh` to eliminate Go stdlib CVEs introduced by the gosu binary |
 | **v1.9.5** | 2026-06-25 | Fix `entrypoint.sh` CRLF line endings: Windows git checkout converts LF→CRLF making the shebang unparseable on Linux; strip in Dockerfile `RUN sed` and add `.gitattributes eol=lf` |
+| **v1.9.6** | 2026-06-25 | Add Monthly Costs section at top of doc |
