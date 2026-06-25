@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.9.4
+> **Version:** v1.9.5
 > **Last Updated:** 2026-06-24
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -346,3 +346,4 @@ BeaBeaCallMe/
 | **v1.9.2** | 2026-06-24 | Pin all GitHub Actions to commit SHAs; add non-root `appuser` to Dockerfile; validate recording URL is a `.twilio.com` host before fetching (SSRF mitigation) |
 | **v1.9.3** | 2026-06-24 | Fix data volume permissions: add `entrypoint.sh` + `gosu` to `chown /app/data` to `appuser` at container start before handing off to gunicorn |
 | **v1.9.4** | 2026-06-24 | Replace `gosu` with Python `os.setuid`/`os.setgid` in `entrypoint.sh` to eliminate Go stdlib CVEs introduced by the gosu binary |
+| **v1.9.5** | 2026-06-25 | Fix `entrypoint.sh` CRLF line endings: Windows git checkout converts LF→CRLF making the shebang unparseable on Linux; strip in Dockerfile `RUN sed` and add `.gitattributes eol=lf` |
