@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY . .
 
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 ENV PYTHONUNBUFFERED=1
 
