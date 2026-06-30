@@ -25,12 +25,22 @@ class Config:
     SECRET_KEY = require_env("FLASK_SECRET_KEY")
 
     GDRIVE_CREDENTIALS_PATH = require_env("GDRIVE_CREDENTIALS_PATH")
-    GDRIVE_FOLDER_ID = require_env("GDRIVE_FOLDER_ID")
+    GDRIVE_FOLDER_ID = require_env("GDRIVE_FOLDER_ID")  # Shared Drive ID
+    GDRIVE_FOLDER_ID_FROM_BEA = require_env("GDRIVE_FOLDER_ID_FROM_BEA")
+    GDRIVE_FOLDER_ID_TO_BEA = require_env("GDRIVE_FOLDER_ID_TO_BEA")
 
-    # Comma-separated E.164 numbers allowed to call in; empty = allow all
-    ALLOWED_CALLERS = [
+    # The single number that routes to Bea's IVR menu (voicemail + conference)
+    BEA_CALLER_ID = require_env("BEA_CALLER_ID")
+
+    # Comma-separated E.164 numbers that route to the friend IVR menu (voicemail only)
+    FRIEND_CALLERS = [
+        n.strip() for n in os.getenv("FRIEND_CALLERS", "").split(",") if n.strip()
+    ]
+
+    # Comma-separated E.164 numbers Twilio dials when Bea starts a group call
+    CONFERENCE_PARTICIPANTS = [
         n.strip()
-        for n in os.getenv("ALLOWED_CALLERS", "").split(",")
+        for n in os.getenv("CONFERENCE_PARTICIPANTS", "").split(",")
         if n.strip()
     ]
 

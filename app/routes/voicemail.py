@@ -11,6 +11,7 @@ from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse
 
 from app.gdrive import upload_recording
+from app.utils.caller_role import get_caller_role
 from app.utils.db import init_db, log_recording
 from app.utils.slack import notify_new_recording
 from app.utils.twilio_validator import validate_twilio_request
@@ -110,9 +111,16 @@ def voicemail_callback():
         file_size = os.path.getsize(filepath)
         logger.info("Saved recording to %s (%d bytes)", filepath, file_size)
 
+        role = get_caller_role(caller_id)
+        folder_id = (
+            Config.GDRIVE_FOLDER_ID_FROM_BEA
+            if role == "bea"
+            else Config.GDRIVE_FOLDER_ID_TO_BEA
+        )
+
         drive_file_id = None
         try:
-            drive_file_id = upload_recording(filepath, filename)
+            drive_file_id = upload_recording(filepath, filename, folder_id)
         except Exception:
             logger.exception("GDrive upload failed for %s — keeping local copy", filename)
 
