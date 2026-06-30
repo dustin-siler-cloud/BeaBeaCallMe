@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v2.0.0
+> **Version:** v2.1.0
 > **Last Updated:** 2026-06-30
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -13,6 +13,8 @@
 |---|---|---|
 | **Twilio phone number** | ~$1.15/mo | Required — inbound voice number |
 | **Twilio inbound calls** | ~$0.0085/min | Negligible at typical usage (a few short calls/mo) |
+| **Twilio outbound calls** | ~$0.014/min | Group call participant legs; negligible at typical usage |
+| **Twilio SMS notifications** | ~$0.0079/message | One per `SMS_NOTIFY_NUMBERS` recipient per voicemail; negligible at typical usage |
 | **Cloudflare Tunnel** | Free | Named tunnel, no bandwidth cap for this use case |
 | **Google Drive** | Free | Storage via existing Google account |
 | **GitHub** | Free | Public repo |
@@ -38,7 +40,7 @@
 
 ## Architecture Overview
 
-Any inbound caller hits Twilio → Twilio posts to `/call` → the app looks up the caller's role (`bea`, `friend`, or rejected) and plays a role-specific menu. Bea's menu offers voicemail (1) and a group call (6); the friend menu offers voicemail only (1). Voicemails are downloaded, saved locally, uploaded to a role-specific Google Drive subfolder, logged to SQLite, and trigger a Slack notification. The group call drops Bea into a Twilio conference room and dials out to configured participants.
+Any inbound caller hits Twilio → Twilio posts to `/call` → the app looks up the caller's role (`bea`, `friend`, or rejected) and plays a role-specific menu. Bea's menu offers voicemail (1) and a group call (6); the friend menu offers voicemail only (1). Voicemails are downloaded, saved locally, uploaded to a role-specific Google Drive subfolder, logged to SQLite, and trigger an SMS notification. The group call drops Bea into a Twilio conference room and dials out to configured participants.
 
 ```
   Bea's phone          Friend's phone
@@ -68,7 +70,7 @@ Any inbound caller hits Twilio → Twilio posts to `/call` → the app looks up 
   │       ├─ upload to Google Drive         │
   │       │    (From Bea or To Bea folder)  │
   │       ├─ log to SQLite                  │
-  │       ├─ send Slack notification        │
+  │       ├─ send SMS notification           │
   │       └─ delete from Twilio             │
   │     /conference       Bea joins room,   │
   │                        dials out to     │
@@ -153,7 +155,7 @@ Every inbound call is classified before any menu plays:
 | `POST /call/route` | `ivr` | Routes digit by role: `1` → `/voicemail` (either role); `6` → `/conference` (`bea` only); anything else re-prompts |
 | `POST /voicemail` | `voicemail` | Says "leave a message after the beep", starts `<Record>` |
 | `POST /voicemail/done` | `voicemail` | Hangs up |
-| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive (role-specific subfolder) → SQLite log → Slack notification → delete from Twilio |
+| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive (role-specific subfolder) → SQLite log → SMS notification → delete from Twilio |
 | `POST /conference` | `conference` | Bea joins a Twilio conference room; app dials out to `CONFERENCE_PARTICIPANTS` |
 | `POST /conference/join` | `conference` | TwiML answered by each outbound participant leg — joins the same conference room |
 
@@ -223,15 +225,15 @@ Recordings are saved locally under `./data/recordings/YYYY/MM/DD/` and mirrored 
 
 ### Notifications
 
-**Slack (`app/utils/slack.py`):**
+**SMS (`app/utils/sms.py`):**
 
-After each successful voicemail save, the app posts a message to a configured Slack channel via an incoming webhook. The message includes:
-- Caller's friendly name (from `CALLER_NAMES`)
+After each successful voicemail save, the app sends a text message via the Twilio REST API to every number in `SMS_NOTIFY_NUMBERS`. The message includes:
+- Direction ("from Bea" or "for Bea (from {caller name})")
 - Timestamp of the recording (Eastern time)
 - Duration in seconds
 - Direct link to the file in Google Drive (`https://drive.google.com/file/d/{file_id}/view`)
 
-The webhook is configured via `SLACK_WEBHOOK_URL` in `.env`. If the variable is unset, notifications are silently skipped — no error is raised. Slack failures are logged as warnings and do not affect the recording save or Twilio callback response.
+If `SMS_NOTIFY_NUMBERS` is unset, notifications are silently skipped — no error is raised. A failed send to one recipient is logged as a warning and does not block sending to the others or affect the recording save / Twilio callback response.
 
 ---
 
@@ -314,7 +316,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `GDRIVE_FOLDER_ID` | Shared Drive ID (root) | `0ABCDEFGHIJKLMNOPabcd` |
 | `GDRIVE_FOLDER_ID_FROM_BEA` | Subfolder ID for voicemails Bea leaves for friends | `1ABCDEFGHIJKLMNOPabcd` |
 | `GDRIVE_FOLDER_ID_TO_BEA` | Subfolder ID for voicemails friends leave for Bea | `1ZYXWVUTSRQPONMabcd` |
-| `SLACK_WEBHOOK_URL` | Slack incoming webhook URL for new voicemail notifications (optional) | `https://hooks.slack.com/services/...` |
+| `SMS_NOTIFY_NUMBERS` | Comma-separated E.164 numbers to text on new voicemail (optional) | `+15550001111,+15550002222` |
 
 ### Optional
 
@@ -396,3 +398,4 @@ BeaBeaCallMe/
 | **v1.9.5** | 2026-06-25 | Fix `entrypoint.sh` CRLF line endings: Windows git checkout converts LF→CRLF making the shebang unparseable on Linux; strip in Dockerfile `RUN sed` and add `.gitattributes eol=lf` |
 | **v1.9.6** | 2026-06-25 | Add Monthly Costs section at top of doc |
 | **v2.0.0** | 2026-06-30 | Caller-role IVR routing: `BEA_CALLER_ID`/`FRIEND_CALLERS` replace `ALLOWED_CALLERS`; Bea's menu gets a new "press 6" group call option; friends get a voicemail-only menu; new `/conference` + `/conference/join` routes dial out to `CONFERENCE_PARTICIPANTS` via Twilio `<Dial><Conference>`; recordings route to role-specific Google Drive subfolders (`GDRIVE_FOLDER_ID_FROM_BEA` / `GDRIVE_FOLDER_ID_TO_BEA`); separate greeting clip shuffle queues per role (`TWILIO_GREETING_CLIPS` / `TWILIO_FRIEND_GREETING_CLIPS`) |
+| **v2.1.0** | 2026-06-30 | Replace Slack notifications with SMS via Twilio (`SMS_NOTIFY_NUMBERS`, `app/utils/sms.py`); remove `app/utils/slack.py` and `SLACK_WEBHOOK_URL`; remove "leave a message after the beep" TTS prompt — recording now starts straight to the beep |
