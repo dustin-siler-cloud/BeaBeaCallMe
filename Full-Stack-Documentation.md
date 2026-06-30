@@ -318,6 +318,8 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `GDRIVE_FOLDER_ID_TO_BEA` | Subfolder ID for voicemails friends leave for Bea | `1ZYXWVUTSRQPONMabcd` |
 | `SMS_NOTIFY_NUMBERS` | Comma-separated E.164 numbers to text on new voicemail (optional) | `+15550001111,+15550002222` |
 
+> **Keep `CONFERENCE_PARTICIPANTS` and `FRIEND_CALLERS` in sync:** anyone added to the group call list should also be able to call in and leave Bea a voicemail, so add new numbers to both lists together unless told otherwise for a specific person.
+
 ### Optional
 
 | Variable | Default | Purpose |
