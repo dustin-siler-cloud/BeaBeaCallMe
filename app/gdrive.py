@@ -18,12 +18,12 @@ def _get_service():
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
-def upload_recording(local_path: str, filename: str) -> str:
-    """Upload a WAV file to the configured Shared Drive. Returns the Drive file ID."""
+def upload_recording(local_path: str, filename: str, folder_id: str) -> str:
+    """Upload a WAV file to the given subfolder of the configured Shared Drive. Returns the Drive file ID."""
     drive_id = os.environ["GDRIVE_FOLDER_ID"]
     service = _get_service()
 
-    metadata = {"name": filename, "parents": [drive_id], "driveId": drive_id}
+    metadata = {"name": filename, "parents": [folder_id], "driveId": drive_id}
     media = MediaFileUpload(local_path, mimetype="audio/wav", resumable=False)
 
     file = (

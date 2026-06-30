@@ -18,13 +18,13 @@ def error_response(message="Sorry, something went wrong. Please try again."):
     return twiml_response(vr)
 
 
-def main_menu_twiml():
-    """Build and return the main menu TwiML."""
+def main_menu_twiml(role: str):
+    """Build and return the main menu TwiML for the given caller role ('bea' or 'friend')."""
     vr = VoiceResponse()
     gather = vr.gather(
         num_digits=1, action=f"{Config.BASE_URL}/call/route", method="POST", timeout=10
     )
-    gather.play(next_greeting_url())
+    gather.play(next_greeting_url(role))
     # If no input, repeat the menu
     vr.redirect(f"{Config.BASE_URL}/call")
     return twiml_response(vr)
