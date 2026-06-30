@@ -1,7 +1,7 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v1.9.6
-> **Last Updated:** 2026-06-24
+> **Version:** v2.0.0
+> **Last Updated:** 2026-06-30
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
 
@@ -16,7 +16,7 @@
 | **Cloudflare Tunnel** | Free | Named tunnel, no bandwidth cap for this use case |
 | **Google Drive** | Free | Storage via existing Google account |
 | **GitHub** | Free | Public repo |
-| **Tin Can Party Line** | $9.99/mo | **Optional** — subscription that enables the Tin Can kids' phone to make outbound calls; this project works with any phone as long as its number is in `ALLOWED_CALLERS` |
+| **Tin Can Party Line** | $9.99/mo | **Optional** — subscription that enables the Tin Can kids' phone to make outbound calls; this project works with any phone as long as its number is `BEA_CALLER_ID` or in `FRIEND_CALLERS` |
 
 **Estimated required spend: ~$1.15/mo.** The Tin Can subscription is optional and independent of this project.
 
@@ -38,42 +38,49 @@
 
 ## Architecture Overview
 
-Bea calls a Twilio phone number → Twilio hits `/call` → IVR prompts "press 1 to leave a voicemail" → Bea presses 1 → Twilio records up to 5 minutes → Twilio posts a status callback to `/voicemail/callback` → the app downloads the WAV, saves it locally, uploads it to Google Drive, logs metadata to SQLite, then deletes the recording from Twilio to avoid storage costs.
+Any inbound caller hits Twilio → Twilio posts to `/call` → the app looks up the caller's role (`bea`, `friend`, or rejected) and plays a role-specific menu. Bea's menu offers voicemail (1) and a group call (6); the friend menu offers voicemail only (1). Voicemails are downloaded, saved locally, uploaded to a role-specific Google Drive subfolder, logged to SQLite, and trigger a Slack notification. The group call drops Bea into a Twilio conference room and dials out to configured participants.
 
 ```
-  Bea's Tin Can Phone
-         │  PSTN call
-         ▼
-  ┌─────────────┐
-  │   Twilio    │  Managed phone number (~$1.60/mo)
-  └──────┬──────┘
-         │  HTTPS webhooks (TwiML)
-         ▼
+  Bea's phone          Friend's phone
+         │  PSTN call          │  PSTN call
+         ▼                     ▼
+  ┌─────────────────────────────────┐
+  │            Twilio                │  Managed phone number (~$1.15/mo)
+  └──────────────┬───────────────────┘
+                  │  HTTPS webhooks (TwiML)
+                  ▼
   ┌─────────────────────┐
   │  Cloudflare Tunnel  │  Named tunnel — no open inbound ports
   └──────────┬──────────┘
              │  HTTP → localhost:8080
              ▼
-  ┌─────────────────────────────────────┐
-  │   Windows 11 Gaming PC              │
-  │                                     │
-  │   Docker → Flask app :8080          │
-  │     /call          IVR menu         │
-  │     /voicemail     start recording  │
-  │     /voicemail/done  hang up        │
-  │     /voicemail/callback             │
-  │       ├─ download WAV from Twilio   │
-  │       ├─ save to ./data/recordings/ │
-  │       ├─ upload to Google Drive     │
-  │       ├─ log to SQLite              │
-  │       ├─ send Slack notification    │
-  │       └─ delete from Twilio         │
-  └─────────────────────────────────────┘
+  ┌─────────────────────────────────────────┐
+  │   Windows 11 Gaming PC                  │
+  │                                         │
+  │   Docker → Flask app :8080              │
+  │     /call            role-based menu    │
+  │     /call/route      digit routing      │
+  │     /voicemail       start recording    │
+  │     /voicemail/done  hang up            │
+  │     /voicemail/callback                 │
+  │       ├─ download WAV from Twilio       │
+  │       ├─ save to ./data/recordings/     │
+  │       ├─ upload to Google Drive         │
+  │       │    (From Bea or To Bea folder)  │
+  │       ├─ log to SQLite                  │
+  │       ├─ send Slack notification        │
+  │       └─ delete from Twilio             │
+  │     /conference       Bea joins room,   │
+  │                        dials out to     │
+  │                        participants     │
+  │     /conference/join  participant leg   │
+  │                        joins room       │
+  └─────────────────────────────────────────┘
          │  Google Drive API (service account)
          ▼
-  ┌─────────────────┐
-  │  Google Drive   │  Shared folder — owner can listen from any device
-  └─────────────────┘
+  ┌──────────────────────────┐
+  │  Google Drive             │  "From Bea" / "To Bea" subfolders
+  └──────────────────────────┘
 ```
 
 ---
@@ -131,15 +138,24 @@ A named Cloudflare tunnel runs as a Docker service alongside the app. The `cloud
 | **twilio** | 9.10.9 | Twilio REST client + TwiML builder | https://www.twilio.com/docs/libraries/python |
 | **requests** | 2.34.2 | Download recordings from Twilio | https://docs.python-requests.org/ |
 
+**Caller Roles (`app/utils/caller_role.py`):**
+
+Every inbound call is classified before any menu plays:
+- `bea` — caller matches `BEA_CALLER_ID` exactly
+- `friend` — caller is in `FRIEND_CALLERS` (comma-separated)
+- unrecognized — call is rejected via `<Reject>` before hearing any menu
+
 **IVR Flow (`app/routes/`):**
 
 | Route | Blueprint | What Happens |
 |---|---|---|
-| `POST /call` | `ivr` | Entry point — plays main menu ("press 1 to leave a voicemail") |
-| `POST /call/route` | `ivr` | Routes digit: `1` → redirect to `/voicemail`, else re-prompt |
+| `POST /call` | `ivr` | Entry point — classifies caller role, plays role-specific menu (`bea`: press 1 or 6; `friend`: press 1 only) |
+| `POST /call/route` | `ivr` | Routes digit by role: `1` → `/voicemail` (either role); `6` → `/conference` (`bea` only); anything else re-prompts |
 | `POST /voicemail` | `voicemail` | Says "leave a message after the beep", starts `<Record>` |
 | `POST /voicemail/done` | `voicemail` | Hangs up |
-| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive → SQLite log → Slack notification → delete from Twilio |
+| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive (role-specific subfolder) → SQLite log → Slack notification → delete from Twilio |
+| `POST /conference` | `conference` | Bea joins a Twilio conference room; app dials out to `CONFERENCE_PARTICIPANTS` |
+| `POST /conference/join` | `conference` | TwiML answered by each outbound participant leg — joins the same conference room |
 
 **Security headers (`app/utils/security_headers.py`):**
 
@@ -157,9 +173,15 @@ Applied to every response via `app.after_request`:
 
 **IVR Greeting Audio (`app/utils/audio_shuffle.py`):**
 
-IVR greeting MP3 clips are hosted on Twilio Assets (visibility: Protected) at the URL configured in `TWILIO_ASSET_BASE`. Filenames are configured via `TWILIO_GREETING_CLIPS` (comma-separated, stored in `.env`). Clips were generated using [fish.audio](https://fish.audio/app).
+IVR greeting MP3 clips are hosted on Twilio Assets (visibility: Protected) at the URL configured in `TWILIO_ASSET_BASE`. There are two independent clip sets and shuffle queues, one per caller role:
+- `TWILIO_GREETING_CLIPS` — Bea's menu (mentions both voicemail and group call options)
+- `TWILIO_FRIEND_GREETING_CLIPS` — friend menu (voicemail option only, no Bea-specific content)
 
-The shuffle queue (`audio_shuffle.py`) exhausts all clips before repeating, resetting on container restart. Source MP3 files are stored locally outside the repo (not committed).
+Clips were generated using [fish.audio](https://fish.audio/app). Each shuffle queue exhausts all its clips before repeating, resetting on container restart. Source MP3 files are stored locally outside the repo (not committed).
+
+**Group Call (`app/routes/conference.py`):**
+
+When Bea presses 6, the app drops her into a named Twilio conference room (`<Dial><Conference>`) and places outbound calls via the Twilio REST API to every number in `CONFERENCE_PARTICIPANTS`. Each outbound leg answers with TwiML from `/conference/join`, which joins the same room. The conference ends when Bea hangs up (`end_conference_on_exit=True` on her leg only); a 10-minute hard cap (`time_limit`) prevents runaway calls. Participants who don't answer simply never join — no error surfaces to Bea.
 
 ### Google Drive
 
@@ -170,9 +192,13 @@ The shuffle queue (`audio_shuffle.py`) exhausts all clips before repeating, rese
 
 **Helper (`app/gdrive.py`):**
 - Authenticates with a service account JSON file (scope: `drive`)
-- `upload_recording(local_path, filename)` → uploads WAV to the configured Shared Drive, returns Drive file ID
-- Uses `supportsAllDrives=True` and `driveId` in metadata to target the Shared Drive root
+- `upload_recording(local_path, filename, folder_id)` → uploads WAV to the given subfolder, returns Drive file ID
+- `driveId` (the Shared Drive root, `GDRIVE_FOLDER_ID`) and `parents` (the target subfolder) are set separately — `supportsAllDrives=True` is required for both
 - GDrive upload failure is non-fatal: logged as a warning, local copy kept, Twilio callback still returns 204
+
+**Subfolders:** recordings route to one of two subfolders within the Shared Drive based on caller role:
+- `GDRIVE_FOLDER_ID_FROM_BEA` — voicemails Bea leaves for friends
+- `GDRIVE_FOLDER_ID_TO_BEA` — voicemails friends leave for Bea
 
 ### Database (SQLite)
 
@@ -275,14 +301,19 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `TWILIO_AUTH_TOKEN` | Twilio auth token (also used for request validation) | `your_auth_token_here` |
 | `TWILIO_PHONE_NUMBER` | Twilio phone number | `+15550000000` |
 | `TWILIO_ASSET_BASE` | Twilio Assets service base URL (no trailing slash) | `https://your-service-name.twil.io` |
-| `TWILIO_GREETING_CLIPS` | Comma-separated MP3 filenames hosted on Twilio Assets | `greeting-01.mp3,greeting-02.mp3` |
+| `TWILIO_GREETING_CLIPS` | Comma-separated MP3 filenames hosted on Twilio Assets — Bea's menu | `greeting-01.mp3,greeting-02.mp3` |
+| `TWILIO_FRIEND_GREETING_CLIPS` | Comma-separated MP3 filenames hosted on Twilio Assets — friend menu | `friend-greeting-01.mp3` |
 | `BASE_URL` | Public tunnel URL (no trailing slash) | `https://your-tunnel.your-domain.com` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token for cloudflared container | (from Cloudflare dashboard) |
 | `FLASK_SECRET_KEY` | Flask session secret — generate with `python -c "import secrets; print(secrets.token_hex(32))"` | (long random string) |
-| `ALLOWED_CALLERS` | Comma-separated E.164 numbers permitted to call in; empty = allow all callers | `+15551234567,+15559876543` |
+| `BEA_CALLER_ID` | Single E.164 number that routes to Bea's IVR menu (voicemail + group call) | `+15550001111` |
+| `FRIEND_CALLERS` | Comma-separated E.164 numbers that route to the friend IVR menu (voicemail only) | `+15550002222,+15550003333` |
+| `CONFERENCE_PARTICIPANTS` | Comma-separated E.164 numbers Twilio dials when Bea starts a group call | `+15550002222,+15550003333` |
 | `CALLER_NAMES` | Comma-separated `E.164:Name` pairs for friendly filenames | `+15550001111:Bea,+15550002222:Dustin` |
 | `GDRIVE_CREDENTIALS_PATH` | Path to service account JSON inside container | `/app/secrets/your-credentials-file.json` |
-| `GDRIVE_FOLDER_ID` | Shared Drive ID to upload recordings into | `0ABCDEFGHIJKLMNOPabcd` |
+| `GDRIVE_FOLDER_ID` | Shared Drive ID (root) | `0ABCDEFGHIJKLMNOPabcd` |
+| `GDRIVE_FOLDER_ID_FROM_BEA` | Subfolder ID for voicemails Bea leaves for friends | `1ABCDEFGHIJKLMNOPabcd` |
+| `GDRIVE_FOLDER_ID_TO_BEA` | Subfolder ID for voicemails friends leave for Bea | `1ZYXWVUTSRQPONMabcd` |
 | `SLACK_WEBHOOK_URL` | Slack incoming webhook URL for new voicemail notifications (optional) | `https://hooks.slack.com/services/...` |
 
 ### Optional
@@ -364,3 +395,4 @@ BeaBeaCallMe/
 | **v1.9.4** | 2026-06-24 | Replace `gosu` with Python `os.setuid`/`os.setgid` in `entrypoint.sh` to eliminate Go stdlib CVEs introduced by the gosu binary |
 | **v1.9.5** | 2026-06-25 | Fix `entrypoint.sh` CRLF line endings: Windows git checkout converts LF→CRLF making the shebang unparseable on Linux; strip in Dockerfile `RUN sed` and add `.gitattributes eol=lf` |
 | **v1.9.6** | 2026-06-25 | Add Monthly Costs section at top of doc |
+| **v2.0.0** | 2026-06-30 | Caller-role IVR routing: `BEA_CALLER_ID`/`FRIEND_CALLERS` replace `ALLOWED_CALLERS`; Bea's menu gets a new "press 6" group call option; friends get a voicemail-only menu; new `/conference` + `/conference/join` routes dial out to `CONFERENCE_PARTICIPANTS` via Twilio `<Dial><Conference>`; recordings route to role-specific Google Drive subfolders (`GDRIVE_FOLDER_ID_FROM_BEA` / `GDRIVE_FOLDER_ID_TO_BEA`); separate greeting clip shuffle queues per role (`TWILIO_GREETING_CLIPS` / `TWILIO_FRIEND_GREETING_CLIPS`) |
