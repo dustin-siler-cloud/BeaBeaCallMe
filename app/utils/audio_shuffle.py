@@ -4,28 +4,32 @@ import threading
 
 _TWILIO_ASSET_BASE = os.environ["TWILIO_ASSET_BASE"].rstrip("/")
 
-_GREETING_CLIPS = [
-    clip.strip()
-    for clip in os.environ["TWILIO_GREETING_CLIPS"].split(",")
-    if clip.strip()
-]
 
-if not _GREETING_CLIPS:
-    raise RuntimeError("Missing required environment variable: TWILIO_GREETING_CLIPS")
+class _ClipShuffle:
+    def __init__(self, env_var: str):
+        self._clips = [
+            clip.strip() for clip in os.environ[env_var].split(",") if clip.strip()
+        ]
+        if not self._clips:
+            raise RuntimeError(f"Missing required environment variable: {env_var}")
+        self._queue: list[str] = []
+        self._lock = threading.Lock()
 
-_queue: list[str] = []
-_lock = threading.Lock()
+    def next_url(self) -> str:
+        with self._lock:
+            if not self._queue:
+                shuffled = self._clips[:]
+                random.shuffle(shuffled)
+                self._queue.extend(shuffled)
+            clip = self._queue.pop(0)
+        return f"{_TWILIO_ASSET_BASE}/{clip}"
 
 
-def _refill() -> None:
-    shuffled = _GREETING_CLIPS[:]
-    random.shuffle(shuffled)
-    _queue.extend(shuffled)
+_bea_shuffle = _ClipShuffle("TWILIO_GREETING_CLIPS")
+_friend_shuffle = _ClipShuffle("TWILIO_FRIEND_GREETING_CLIPS")
 
 
-def next_greeting_url() -> str:
-    with _lock:
-        if not _queue:
-            _refill()
-        clip = _queue.pop(0)
-    return f"{_TWILIO_ASSET_BASE}/{clip}"
+def next_greeting_url(role: str = "bea") -> str:
+    if role == "friend":
+        return _friend_shuffle.next_url()
+    return _bea_shuffle.next_url()
