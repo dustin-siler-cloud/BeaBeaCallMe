@@ -13,7 +13,7 @@ from twilio.twiml.voice_response import VoiceResponse
 from app.gdrive import upload_recording
 from app.utils.caller_role import get_caller_role
 from app.utils.db import init_db, log_recording
-from app.utils.slack import notify_new_recording
+from app.utils.sms import notify_new_recording
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, twiml_response
 from config import Config
@@ -31,7 +31,6 @@ def voicemail():
     try:
         vr = VoiceResponse()
         caller = request.form.get("From", "unknown")
-        vr.say("Please leave your message after the beep.")
         vr.record(
             action=f"{Config.BASE_URL}/voicemail/done",
             recording_status_callback=f"{Config.BASE_URL}/voicemail/callback?from={quote(caller, safe='')}",
@@ -134,7 +133,7 @@ def voicemail_callback():
             gdrive_file_id=drive_file_id,
         )
 
-        notify_new_recording(caller_name, timestamp, int(duration), drive_file_id)
+        notify_new_recording(caller_name, timestamp, int(duration), drive_file_id, role)
 
         # Delete from Twilio to avoid storage costs
         _delete_from_twilio(recording_sid)

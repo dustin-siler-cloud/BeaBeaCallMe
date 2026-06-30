@@ -51,3 +51,8 @@ class Config:
         if ":" in entry
         for number, name in [entry.strip().split(":", 1)]
     }
+
+    # Comma-separated E.164 numbers to text when a new voicemail is saved (optional)
+    SMS_NOTIFY_NUMBERS = [
+        n.strip() for n in os.getenv("SMS_NOTIFY_NUMBERS", "").split(",") if n.strip()
+    ]
