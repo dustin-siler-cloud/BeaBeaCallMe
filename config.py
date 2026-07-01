@@ -56,3 +56,10 @@ class Config:
     SMS_NOTIFY_NUMBERS = [
         n.strip() for n in os.getenv("SMS_NOTIFY_NUMBERS", "").split(",") if n.strip()
     ]
+
+    # Email notifications on new voicemail via Resend (optional)
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    EMAIL_FROM = os.getenv("EMAIL_FROM", "")
+    EMAIL_NOTIFY_TO = [
+        n.strip() for n in os.getenv("EMAIL_NOTIFY_TO", "").split(",") if n.strip()
+    ]
