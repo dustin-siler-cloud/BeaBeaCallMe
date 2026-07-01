@@ -4,6 +4,7 @@ from flask import Blueprint, request
 from twilio.twiml.voice_response import VoiceResponse
 
 from app.utils.caller_role import get_caller_role
+from app.utils.time_window import is_conference_window_open
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, main_menu_twiml, twiml_response
 from config import Config
@@ -53,7 +54,11 @@ def route():
         if digit == "1":
             vr.redirect(f"{Config.BASE_URL}/voicemail")
         elif digit == "6" and role == "bea":
-            vr.redirect(f"{Config.BASE_URL}/conference")
+            if is_conference_window_open():
+                vr.redirect(f"{Config.BASE_URL}/conference")
+            else:
+                vr.say("Sorry, you can call your friends between 10 AM and 8 PM. Please try again later.")
+                vr.hangup()
         else:
             vr.say("I didn't catch that.")
             vr.redirect(f"{Config.BASE_URL}/call")

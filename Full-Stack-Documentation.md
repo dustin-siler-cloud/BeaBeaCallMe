@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v2.1.0
+> **Version:** v2.2.0
 > **Last Updated:** 2026-06-30
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -14,7 +14,8 @@
 | **Twilio phone number** | ~$1.15/mo | Required — inbound voice number |
 | **Twilio inbound calls** | ~$0.0085/min | Negligible at typical usage (a few short calls/mo) |
 | **Twilio outbound calls** | ~$0.014/min | Group call participant legs; negligible at typical usage |
-| **Twilio SMS notifications** | ~$0.0079/message | One per `SMS_NOTIFY_NUMBERS` recipient per voicemail; negligible at typical usage |
+| **Twilio SMS notifications** | ~$0.0079/message | One per `SMS_NOTIFY_NUMBERS` recipient per voicemail; requires A2P 10DLC registration; negligible at typical usage |
+| **Resend email notifications** | Free | Free tier covers 3,000 emails/month; negligible usage here |
 | **Cloudflare Tunnel** | Free | Named tunnel, no bandwidth cap for this use case |
 | **Google Drive** | Free | Storage via existing Google account |
 | **GitHub** | Free | Public repo |
@@ -152,11 +153,11 @@ Every inbound call is classified before any menu plays:
 | Route | Blueprint | What Happens |
 |---|---|---|
 | `POST /call` | `ivr` | Entry point — classifies caller role, plays role-specific menu (`bea`: press 1 or 6; `friend`: press 1 only) |
-| `POST /call/route` | `ivr` | Routes digit by role: `1` → `/voicemail` (either role); `6` → `/conference` (`bea` only); anything else re-prompts |
-| `POST /voicemail` | `voicemail` | Says "leave a message after the beep", starts `<Record>` |
+| `POST /call/route` | `ivr` | Routes digit by role: `1` → `/voicemail` (either role); `6` → `/conference` (`bea` only, 10 AM–8 PM Eastern only); anything else re-prompts |
+| `POST /voicemail` | `voicemail` | Starts `<Record>` immediately after the beep (no TTS prompt) |
 | `POST /voicemail/done` | `voicemail` | Hangs up |
-| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive (role-specific subfolder) → SQLite log → SMS notification → delete from Twilio |
-| `POST /conference` | `conference` | Bea joins a Twilio conference room; app dials out to `CONFERENCE_PARTICIPANTS` |
+| `POST /voicemail/callback` | `voicemail` | Downloads WAV → local disk → Google Drive (role-specific subfolder) → SQLite log → SMS + email notification → delete from Twilio |
+| `POST /conference` | `conference` | Bea joins a Twilio conference room (10 AM–8 PM Eastern only); app dials out to `CONFERENCE_PARTICIPANTS` |
 | `POST /conference/join` | `conference` | TwiML answered by each outbound participant leg — joins the same conference room |
 
 **Security headers (`app/utils/security_headers.py`):**
@@ -184,6 +185,8 @@ Clips were generated using [fish.audio](https://fish.audio/app). Each shuffle qu
 **Group Call (`app/routes/conference.py`):**
 
 When Bea presses 6, the app drops her into a named Twilio conference room (`<Dial><Conference>`) and places outbound calls via the Twilio REST API to every number in `CONFERENCE_PARTICIPANTS`. Each outbound leg answers with TwiML from `/conference/join`, which joins the same room. The conference ends when Bea hangs up (`end_conference_on_exit=True` on her leg only); a 10-minute hard cap (`time_limit`) prevents runaway calls. Participants who don't answer simply never join — no error surfaces to Bea.
+
+**Time-of-day guard rail (`app/utils/time_window.py`):** the group call option is only available 10:00 AM–8:00 PM Eastern (hardcoded `CONFERENCE_WINDOW_START`/`CONFERENCE_WINDOW_END`), regardless of the server/container's own timezone — this exists so a young child pressing buttons can't wake anyone up overnight. The check runs twice: once in `/call/route` before offering the redirect, and again in `/conference` itself as defense-in-depth in case the window closes mid-transition. Outside the window, Bea hears a friendly message and the call ends; this does not affect the voicemail option, which has no time restriction.
 
 ### Google Drive
 
@@ -234,6 +237,14 @@ After each successful voicemail save, the app sends a text message via the Twili
 - Direct link to the file in Google Drive (`https://drive.google.com/file/d/{file_id}/view`)
 
 If `SMS_NOTIFY_NUMBERS` is unset, notifications are silently skipped — no error is raised. A failed send to one recipient is logged as a warning and does not block sending to the others or affect the recording save / Twilio callback response.
+
+SMS delivery from a standard US long code requires Twilio A2P 10DLC brand + campaign registration before carriers will deliver messages reliably. Until that registration is approved, sends will typically be filtered.
+
+**Email (`app/utils/email_notify.py`):**
+
+After each successful voicemail save, the app sends an email via the [Resend](https://resend.com) API to every address in `EMAIL_NOTIFY_TO`. Same message content as SMS. Requires `RESEND_API_KEY` and a verified sending domain (`EMAIL_FROM`). If either `RESEND_API_KEY` or `EMAIL_NOTIFY_TO` is unset, notifications are silently skipped. Failures are logged as warnings and do not block the recording save or Twilio callback response.
+
+Email has no carrier registration requirement and works immediately — useful as the primary notification channel while SMS A2P registration is pending.
 
 ---
 
@@ -317,6 +328,9 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `GDRIVE_FOLDER_ID_FROM_BEA` | Subfolder ID for voicemails Bea leaves for friends | `1ABCDEFGHIJKLMNOPabcd` |
 | `GDRIVE_FOLDER_ID_TO_BEA` | Subfolder ID for voicemails friends leave for Bea | `1ZYXWVUTSRQPONMabcd` |
 | `SMS_NOTIFY_NUMBERS` | Comma-separated E.164 numbers to text on new voicemail (optional) | `+15550001111,+15550002222` |
+| `RESEND_API_KEY` | Resend API key for email notifications (optional) | `re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `EMAIL_FROM` | Verified sending address for Resend | `noreply@your-domain.com` |
+| `EMAIL_NOTIFY_TO` | Comma-separated email addresses to notify on new voicemail (optional) | `you@your-domain.com` |
 
 > **Keep `CONFERENCE_PARTICIPANTS` and `FRIEND_CALLERS` in sync:** anyone added to the group call list should also be able to call in and leave Bea a voicemail, so add new numbers to both lists together unless told otherwise for a specific person.
 
@@ -401,3 +415,4 @@ BeaBeaCallMe/
 | **v1.9.6** | 2026-06-25 | Add Monthly Costs section at top of doc |
 | **v2.0.0** | 2026-06-30 | Caller-role IVR routing: `BEA_CALLER_ID`/`FRIEND_CALLERS` replace `ALLOWED_CALLERS`; Bea's menu gets a new "press 6" group call option; friends get a voicemail-only menu; new `/conference` + `/conference/join` routes dial out to `CONFERENCE_PARTICIPANTS` via Twilio `<Dial><Conference>`; recordings route to role-specific Google Drive subfolders (`GDRIVE_FOLDER_ID_FROM_BEA` / `GDRIVE_FOLDER_ID_TO_BEA`); separate greeting clip shuffle queues per role (`TWILIO_GREETING_CLIPS` / `TWILIO_FRIEND_GREETING_CLIPS`) |
 | **v2.1.0** | 2026-06-30 | Replace Slack notifications with SMS via Twilio (`SMS_NOTIFY_NUMBERS`, `app/utils/sms.py`); remove `app/utils/slack.py` and `SLACK_WEBHOOK_URL`; remove "leave a message after the beep" TTS prompt — recording now starts straight to the beep |
+| **v2.2.0** | 2026-06-30 | Group call time-of-day guard rail: `/call/route` and `/conference` both enforce a 10 AM–8 PM Eastern window (`app/utils/time_window.py`), regardless of server timezone, so Bea can't start a group call overnight; add email notifications via Resend (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_NOTIFY_TO`, `app/utils/email_notify.py`) as an SMS-independent channel since A2P 10DLC registration is still pending |

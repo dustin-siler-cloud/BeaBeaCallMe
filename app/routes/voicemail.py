@@ -13,7 +13,8 @@ from twilio.twiml.voice_response import VoiceResponse
 from app.gdrive import upload_recording
 from app.utils.caller_role import get_caller_role
 from app.utils.db import init_db, log_recording
-from app.utils.sms import notify_new_recording
+from app.utils.email_notify import notify_new_recording as notify_email
+from app.utils.sms import notify_new_recording as notify_sms
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, twiml_response
 from config import Config
@@ -133,7 +134,8 @@ def voicemail_callback():
             gdrive_file_id=drive_file_id,
         )
 
-        notify_new_recording(caller_name, timestamp, int(duration), drive_file_id, role)
+        notify_sms(caller_name, timestamp, int(duration), drive_file_id, role)
+        notify_email(caller_name, timestamp, int(duration), drive_file_id, role)
 
         # Delete from Twilio to avoid storage costs
         _delete_from_twilio(recording_sid)
