@@ -4,6 +4,7 @@ from flask import Blueprint
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse
 
+from app.utils.time_window import is_conference_window_open
 from app.utils.twilio_validator import validate_twilio_request
 from app.utils.twiml import error_response, twiml_response
 from config import Config
@@ -21,6 +22,12 @@ def conference():
     """Bea joins the conference room; Twilio dials out to configured participants."""
     try:
         vr = VoiceResponse()
+
+        if not is_conference_window_open():
+            vr.say("Sorry, you can call your friends between 10 AM and 8 PM. Please try again later.")
+            vr.hangup()
+            return twiml_response(vr)
+
         vr.say("Connecting you now. Please hold.")
         dial = vr.dial()
         dial.conference(
