@@ -3,4 +3,4 @@ twilio==9.10.9
 python-dotenv==1.2.2
 requests==2.34.2
 google-api-python-client==2.198.0
-google-auth==2.55.1
+google-auth==2.56.0
