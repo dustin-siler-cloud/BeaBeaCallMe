@@ -1,5 +1,6 @@
-import sqlite3
 import os
+import sqlite3
+
 from config import Config
 
 DB_PATH = os.path.join(Config.DATA_DIR, "ivr.db")
