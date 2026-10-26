@@ -1,7 +1,7 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v2.2.0
-> **Last Updated:** 2026-06-30
+> **Version:** v2.2.1
+> **Last Updated:** 2026-10-26
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
 
@@ -416,3 +416,4 @@ BeaBeaCallMe/
 | **v2.0.0** | 2026-06-30 | Caller-role IVR routing: `BEA_CALLER_ID`/`FRIEND_CALLERS` replace `ALLOWED_CALLERS`; Bea's menu gets a new "press 6" group call option; friends get a voicemail-only menu; new `/conference` + `/conference/join` routes dial out to `CONFERENCE_PARTICIPANTS` via Twilio `<Dial><Conference>`; recordings route to role-specific Google Drive subfolders (`GDRIVE_FOLDER_ID_FROM_BEA` / `GDRIVE_FOLDER_ID_TO_BEA`); separate greeting clip shuffle queues per role (`TWILIO_GREETING_CLIPS` / `TWILIO_FRIEND_GREETING_CLIPS`) |
 | **v2.1.0** | 2026-06-30 | Replace Slack notifications with SMS via Twilio (`SMS_NOTIFY_NUMBERS`, `app/utils/sms.py`); remove `app/utils/slack.py` and `SLACK_WEBHOOK_URL`; remove "leave a message after the beep" TTS prompt — recording now starts straight to the beep |
 | **v2.2.0** | 2026-06-30 | Group call time-of-day guard rail: `/call/route` and `/conference` both enforce a 10 AM–8 PM Eastern window (`app/utils/time_window.py`), regardless of server timezone, so Bea can't start a group call overnight; add email notifications via Resend (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_NOTIFY_TO`, `app/utils/email_notify.py`) as an SMS-independent channel since A2P 10DLC registration is still pending |
+| **v2.2.1** | 2026-10-26 | Fix CI lint failures from a new ruff release whose default rules now include import sorting (`I001`) and mutable class attributes (`RUF012`): reorder imports in six modules and annotate `Config` list/dict attributes with `ClassVar` (no behavior change). CI deliberately keeps installing the latest ruff/bandit so new checks surface rather than being pinned away |
