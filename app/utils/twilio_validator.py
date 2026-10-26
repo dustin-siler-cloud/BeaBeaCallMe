@@ -1,7 +1,9 @@
 import logging
 from functools import wraps
-from flask import request, abort
+
+from flask import abort, request
 from twilio.request_validator import RequestValidator
+
 from config import Config
 
 logger = logging.getLogger(__name__)

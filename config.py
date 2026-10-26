@@ -1,4 +1,6 @@
 import os
+from typing import ClassVar
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,19 +35,19 @@ class Config:
     BEA_CALLER_ID = require_env("BEA_CALLER_ID")
 
     # Comma-separated E.164 numbers that route to the friend IVR menu (voicemail only)
-    FRIEND_CALLERS = [
+    FRIEND_CALLERS: ClassVar[list[str]] = [
         n.strip() for n in os.getenv("FRIEND_CALLERS", "").split(",") if n.strip()
     ]
 
     # Comma-separated E.164 numbers Twilio dials when Bea starts a group call
-    CONFERENCE_PARTICIPANTS = [
+    CONFERENCE_PARTICIPANTS: ClassVar[list[str]] = [
         n.strip()
         for n in os.getenv("CONFERENCE_PARTICIPANTS", "").split(",")
         if n.strip()
     ]
 
     # Comma-separated E.164:Name pairs for friendly filenames e.g. +1234567890:Bea
-    CALLER_NAMES = {
+    CALLER_NAMES: ClassVar[dict[str, str]] = {
         number: name
         for entry in os.getenv("CALLER_NAMES", "").split(",")
         if ":" in entry
@@ -53,13 +55,13 @@ class Config:
     }
 
     # Comma-separated E.164 numbers to text when a new voicemail is saved (optional)
-    SMS_NOTIFY_NUMBERS = [
+    SMS_NOTIFY_NUMBERS: ClassVar[list[str]] = [
         n.strip() for n in os.getenv("SMS_NOTIFY_NUMBERS", "").split(",") if n.strip()
     ]
 
     # Email notifications on new voicemail via Resend (optional)
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
     EMAIL_FROM = os.getenv("EMAIL_FROM", "")
-    EMAIL_NOTIFY_TO = [
+    EMAIL_NOTIFY_TO: ClassVar[list[str]] = [
         n.strip() for n in os.getenv("EMAIL_NOTIFY_TO", "").split(",") if n.strip()
     ]
