@@ -1,7 +1,9 @@
 import logging
+
 from flask import Flask, jsonify
-from config import Config
+
 from app.utils.security_headers import add_security_headers
+from config import Config
 
 
 def create_app():
