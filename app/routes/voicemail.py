@@ -86,6 +86,7 @@ def voicemail_callback():
         caller_name = Config.CALLER_NAMES.get(caller_id, caller_id)
         caller_name = re.sub(r"[^A-Za-z0-9_\-]", "_", caller_name)
         timestamp = now.strftime("%d%b%Y-%-I-%M%p").upper()
+        friendly_timestamp = now.strftime("%B %-d at %-I:%M %p")
         filename = f"{caller_name}-{timestamp}.wav"
 
         save_dir = os.path.join(Config.RECORDINGS_DIR, date_path)
@@ -134,8 +135,8 @@ def voicemail_callback():
             gdrive_file_id=drive_file_id,
         )
 
-        notify_sms(caller_name, timestamp, int(duration), drive_file_id, role)
-        notify_email(caller_name, timestamp, int(duration), drive_file_id, role)
+        notify_sms(caller_name, friendly_timestamp, int(duration), drive_file_id, role)
+        notify_email(caller_name, friendly_timestamp, int(duration), drive_file_id, role)
 
         # Delete from Twilio to avoid storage costs
         _delete_from_twilio(recording_sid)
