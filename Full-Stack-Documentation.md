@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v2.2.1
+> **Version:** v2.2.2
 > **Last Updated:** 2026-10-26
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -95,7 +95,7 @@ Any inbound caller hits Twilio → Twilio posts to `/call` → the app looks up 
 | Component | Image | Purpose |
 |---|---|---|
 | **App** | `python:3.13-slim` | Flask IVR app + GDrive uploader |
-| **cloudflared** | `cloudflare/cloudflared:2026.6.1` | Cloudflare tunnel connector |
+| **cloudflared** | `cloudflare/cloudflared:2026.10.4` | Cloudflare tunnel connector |
 
 **Compose:**
 - `docker-compose.yml` — two services: `app` (port bound to `127.0.0.1:8080`) and `cloudflared` (tunnel connector). `./data` volume for SQLite persistence, `gdrive-credentials.json` mounted read-only from a local path outside the Google Drive virtual filesystem (avoids Docker bind-mount issues with virtual drives).
@@ -417,3 +417,4 @@ BeaBeaCallMe/
 | **v2.1.0** | 2026-06-30 | Replace Slack notifications with SMS via Twilio (`SMS_NOTIFY_NUMBERS`, `app/utils/sms.py`); remove `app/utils/slack.py` and `SLACK_WEBHOOK_URL`; remove "leave a message after the beep" TTS prompt — recording now starts straight to the beep |
 | **v2.2.0** | 2026-06-30 | Group call time-of-day guard rail: `/call/route` and `/conference` both enforce a 10 AM–8 PM Eastern window (`app/utils/time_window.py`), regardless of server timezone, so Bea can't start a group call overnight; add email notifications via Resend (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_NOTIFY_TO`, `app/utils/email_notify.py`) as an SMS-independent channel since A2P 10DLC registration is still pending |
 | **v2.2.1** | 2026-10-26 | Fix CI lint failures from a new ruff release whose default rules now include import sorting (`I001`) and mutable class attributes (`RUF012`): reorder imports in six modules and annotate `Config` list/dict attributes with `ClassVar` (no behavior change). CI deliberately keeps installing the latest ruff/bandit so new checks surface rather than being pinned away |
+| **v2.2.2** | 2026-10-26 | Upgrade pinned `cloudflared` image 2026.6.1 → 2026.10.4 to pick up Cloudflare's fix (2026.10.2 or later) for compromised eMudhra (emSign) intermediate certificates that older cloudflared builds still trusted; origin is plain HTTP on the internal Docker network, so no origin certificate changes were needed |
