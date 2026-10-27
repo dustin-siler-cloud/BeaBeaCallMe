@@ -1,6 +1,6 @@
 # BeaBeaCallMe — Full Stack Reference
 
-> **Version:** v2.2.2
+> **Version:** v2.3.0
 > **Last Updated:** 2026-10-26
 > **Repo:** https://github.com/dustin-siler-cloud/BeaBeaCallMe
 > **Purpose:** Self-hosted IVR voicemail so Bea (age 5) can call a Twilio number from her Tin Can kids' phone and leave voicemails that save to Google Drive.
@@ -174,6 +174,8 @@ Applied to every response via `app.after_request`:
 
 **Request validation:** All routes are decorated with `@validate_twilio_request` (`app/utils/twilio_validator.py`) — verifies the `X-Twilio-Signature` header against `TWILIO_AUTH_TOKEN` to reject spoofed requests.
 
+**Public surface:** The only publicly reachable endpoints are the Twilio webhooks (signature-validated, 403 otherwise) and `/health` (unauthenticated, returns only `{"status":"ok"}` for uptime monitoring). Flask's static file route is disabled (`static_folder=None`), so the app cannot serve files at all — any image or asset an email needs must be hosted elsewhere (for example, Twilio Assets with Public visibility) and referenced by URL.
+
 **IVR Greeting Audio (`app/utils/audio_shuffle.py`):**
 
 IVR greeting MP3 clips are hosted on Twilio Assets (visibility: Protected) at the URL configured in `TWILIO_ASSET_BASE`. There are two independent clip sets and shuffle queues, one per caller role:
@@ -242,7 +244,7 @@ SMS delivery from a standard US long code requires Twilio A2P 10DLC brand + camp
 
 **Email (`app/utils/email_notify.py`):**
 
-After each successful voicemail save, the app sends an email via the [Resend](https://resend.com) API to every address in `EMAIL_NOTIFY_TO`. Same message content as SMS. Requires `RESEND_API_KEY` and a verified sending domain (`EMAIL_FROM`). If either `RESEND_API_KEY` or `EMAIL_NOTIFY_TO` is unset, notifications are silently skipped. Failures are logged as warnings and do not block the recording save or Twilio callback response.
+After each successful voicemail save, the app sends an email via the [Resend](https://resend.com) API to every address in `EMAIL_NOTIFY_TO`. Each message is sent as multipart: a plain-text part and an HTML part. The HTML version is a small themed card (cream background, warm yellow header, rounded sans-serif font with a safe fallback stack) with a sentence such as "{name} left Bea a voicemail on July 28 at 3:56 PM (9 seconds long)", plus a styled "Listen to the message" button linking to the recording in Google Drive. An optional header image is shown when `EMAIL_HEADER_IMAGE_URL` is set to a full public URL; if it is unset the image block is simply omitted. Timestamps in notifications use a friendly Eastern-time format ("July 28 at 3:56 PM") while recording filenames keep their compact format. The richer HTML body with real sentence copy was added after a deliverability investigation found that a plain-text body containing only a bare cross-domain link resembles phishing and was being silently filtered by some recipients' mail providers. Requires `RESEND_API_KEY` and a verified sending domain (`EMAIL_FROM`). If either `RESEND_API_KEY` or `EMAIL_NOTIFY_TO` is unset, notifications are silently skipped. Failures are logged as warnings and do not block the recording save or Twilio callback response.
 
 Email has no carrier registration requirement and works immediately — useful as the primary notification channel while SMS A2P registration is pending.
 
@@ -284,11 +286,11 @@ Container scan is gated to `main`-push only (slow Docker build); all other check
 
 ### External Security Scanning
 
-[Aikido](https://aikido.dev) continuously scans `https://your-tunnel-hostname.example.com` for web application vulnerabilities (missing security headers, exposed endpoints, misconfigurations, etc.).
+[Aikido](https://aikido.dev) continuously scans the app's public hostname for web application vulnerabilities (missing security headers, exposed endpoints, misconfigurations, etc.).
 
 ### Uptime Monitoring
 
-[UptimeRobot](https://uptimerobot.com) monitors `https://your-tunnel-hostname.example.com/health` on the free tier (5-minute ping interval).
+[UptimeRobot](https://uptimerobot.com) monitors the app's `/health` endpoint on the free tier (5-minute ping interval).
 
 ### Deployment Workflow
 
@@ -331,6 +333,7 @@ All configuration is via environment variables in `.env` (git-ignored).
 | `RESEND_API_KEY` | Resend API key for email notifications (optional) | `re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `EMAIL_FROM` | Verified sending address for Resend | `noreply@your-domain.com` |
 | `EMAIL_NOTIFY_TO` | Comma-separated email addresses to notify on new voicemail (optional) | `you@your-domain.com` |
+| `EMAIL_HEADER_IMAGE_URL` | Full public URL of an image shown at the top of notification emails (optional) | `https://your-image-host.example.com/header-image.jpg` |
 
 > **Keep `CONFERENCE_PARTICIPANTS` and `FRIEND_CALLERS` in sync:** anyone added to the group call list should also be able to call in and leave Bea a voicemail, so add new numbers to both lists together unless told otherwise for a specific person.
 
@@ -391,9 +394,9 @@ BeaBeaCallMe/
 | **v1.1.1** | 2026-06-22 | Bump python-dotenv 1.2.1→1.2.2 (CVE-2026-28684), requests 2.32.5→2.33.0 (CVE-2026-25645) |
 | **v1.2.0** | 2026-06-22 | Dependabot batch: twilio 9.10.5→9.10.9, requests 2.33.0→2.34.2, google-api-python-client 2.169.0→2.197.0, google-auth 2.40.3→2.55.0, actions/checkout v4→v7, actions/setup-python v5→v6, trufflehog v3.88.26→v3.95.6, hadolint-action v3.1.0→v3.3.0, anchore/scan-action v6→v7; fix conflict markers in docs |
 | **v1.2.1** | 2026-06-22 | Upgrade Python 3.12→3.13 (resolves CVE-2026-6100 Critical, CVE-2026-7210/4224/3644 High); add `only-fixed: true` to Grype to suppress unfixable Debian OS-level vulns |
-| **v1.3.0** | 2026-06-22 | Add Cloudflare tunnel: `cloudflared` service in docker-compose, named tunnel `beabeacallme` routing `https://your-tunnel-hostname.example.com` → `http://app:8080`; `CLOUDFLARE_TUNNEL_TOKEN` env var |
+| **v1.3.0** | 2026-06-22 | Add Cloudflare tunnel: `cloudflared` service in docker-compose, named tunnel routing the app's public hostname → `http://app:8080`; `CLOUDFLARE_TUNNEL_TOKEN` env var |
 | **v1.3.1** | 2026-06-23 | Add caller allowlist: `ALLOWED_CALLERS` env var; unknown callers are rejected via `<Reject>` TwiML before hearing the IVR |
-| **v1.4.0** | 2026-06-23 | Fix GDrive upload: switch to Shared Drive (`<shared-drive-name>`), `drive` scope, `supportsAllDrives=True`; move credentials file to `C:\dev\BeaBeaCallMe\` to fix Docker bind-mount issue on Google Drive virtual filesystem; add `.dockerignore` |
+| **v1.4.0** | 2026-06-23 | Fix GDrive upload: switch to a Google Shared Drive, `drive` scope, `supportsAllDrives=True`; move credentials file to `C:\dev\BeaBeaCallMe\` to fix Docker bind-mount issue on Google Drive virtual filesystem; add `.dockerignore` |
 | **v1.5.0** | 2026-06-23 | IVR greeting shuffle: replace `<Say>` with `<Play>` using MP3s hosted on Twilio Assets; shuffle queue exhausts all clips before repeating; recording saves on hang-up (`finish_on_key=""`) |
 | **v1.5.1** | 2026-06-23 | Friendly recording filenames: `CALLER_NAMES` env var maps E.164 numbers to names; files named `Caller-23JUN2026-4-41PM.wav` instead of timestamp+SID |
 | **v1.5.2** | 2026-06-23 | Fix caller ID in recording callback (pass via query param); fix timestamp timezone to America/New_York |
@@ -418,3 +421,4 @@ BeaBeaCallMe/
 | **v2.2.0** | 2026-06-30 | Group call time-of-day guard rail: `/call/route` and `/conference` both enforce a 10 AM–8 PM Eastern window (`app/utils/time_window.py`), regardless of server timezone, so Bea can't start a group call overnight; add email notifications via Resend (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_NOTIFY_TO`, `app/utils/email_notify.py`) as an SMS-independent channel since A2P 10DLC registration is still pending |
 | **v2.2.1** | 2026-10-26 | Fix CI lint failures from a new ruff release whose default rules now include import sorting (`I001`) and mutable class attributes (`RUF012`): reorder imports in six modules and annotate `Config` list/dict attributes with `ClassVar` (no behavior change). CI deliberately keeps installing the latest ruff/bandit so new checks surface rather than being pinned away |
 | **v2.2.2** | 2026-10-26 | Upgrade pinned `cloudflared` image 2026.6.1 → 2026.10.4 to pick up Cloudflare's fix (2026.10.2 or later) for compromised eMudhra (emSign) intermediate certificates that older cloudflared builds still trusted; origin is plain HTTP on the internal Docker network, so no origin certificate changes were needed |
+| **v2.3.0** | 2026-10-27 | Email redesign: multipart plain-text + themed HTML body with real sentence copy, friendly timestamps, and an optional header image via `EMAIL_HEADER_IMAGE_URL` (image hosted off-box; nothing is served from this app); disable Flask's static route (`static_folder=None`) so only Twilio webhooks and `/health` are reachable; remove instance-specific hostnames and Shared Drive name from the doc's history |

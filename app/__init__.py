@@ -7,7 +7,8 @@ from config import Config
 
 
 def create_app():
-    app = Flask(__name__)
+    # No static route: nothing is served publicly except Twilio webhooks and /health
+    app = Flask(__name__, static_folder=None)
     app.secret_key = Config.SECRET_KEY
 
     logging.basicConfig(
