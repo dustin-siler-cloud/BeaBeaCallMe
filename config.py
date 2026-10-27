@@ -62,6 +62,8 @@ class Config:
     # Email notifications on new voicemail via Resend (optional)
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
     EMAIL_FROM = os.getenv("EMAIL_FROM", "")
+    # Full public URL of the image shown at the top of notification emails (optional)
+    EMAIL_HEADER_IMAGE_URL = os.getenv("EMAIL_HEADER_IMAGE_URL", "")
     EMAIL_NOTIFY_TO: ClassVar[list[str]] = [
         n.strip() for n in os.getenv("EMAIL_NOTIFY_TO", "").split(",") if n.strip()
     ]
