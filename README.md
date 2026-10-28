@@ -63,4 +63,4 @@ To report a security vulnerability, see [`SECURITY.md`](SECURITY.md).
 
 ## License
 
-No license is currently specified. All rights reserved.
+Released under the [MIT License](LICENSE).
